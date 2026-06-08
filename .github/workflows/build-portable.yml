@@ -1,0 +1,31 @@
+name: Build AppImage
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up dependencies
+        run: sudo apt-get install -y cmake build-essential wget libx11-dev libxt-dev libxmu-dev libxpm-dev
+
+      - name: Download MaXX and its dependencies
+        run: wget -c https://s3.ca-central-1.amazonaws.com/cdn.maxxinteractive.com/maxx-desktop-installer/MaXX-Desktop-v2.2.0-LINUX-x86_64-tar.gz
+
+      - name: Extract MaXX to /opt
+        run: sudo tar -xzf MaXX-Desktop-v2.2.0-LINUX-x86_64-tar.gz -C /opt
+
+      - name: Build AppImage
+        run: chmod +x ./shortcuts.sh && ./shortcuts.sh appimage
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: AppImage
+          path: MotifDesigner-x86_64.AppImage
