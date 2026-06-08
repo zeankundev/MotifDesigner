@@ -1,4 +1,3 @@
-#include <iostream>
 #include <Xm/Xm.h>
 #include <Xm/Form.h>
 #include "IMCPasser.h"
