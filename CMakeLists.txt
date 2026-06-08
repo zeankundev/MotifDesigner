@@ -21,11 +21,13 @@ set(SOURCES
   src/main.cpp
   src/tests/IMCPasser.cpp
   src/external/AboutWindow.cpp
+  src/utils/XPMPixmapManager.cpp
 )
 
 set(HEADERS
   include/IMCPasser.h
   include/Misc.h
+  include/PixmapManager.h
 # Yeah again, but this is just a bootstrap ;)
 )
 
