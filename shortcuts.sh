@@ -11,13 +11,18 @@ build() {
 }
 
 if [ $1 = "" ]; then
-    echo "Please type either: build, clean, quick."
+    echo "Please type either: build, clean, run, quick."
 elif [ $1 = "build" ]; then
     build
 elif [ $1 = "clean" ]; then
     echo "Cleaning up..."
     rm -rf build
+elif [ $1 = "run" ]; then
+    chmod +x build/MotifDesigner
+    ./build/MotifDesigner
 elif [ $1 = "quick" ]; then
-    rm -rf build
+    rm -rf build/
     build
+    chmod +x build/MotifDesigner
+    ./build/MotifDesigner
 fi
