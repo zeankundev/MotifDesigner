@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up dependencies
-        run: sudo apt-get install -y cmake build-essential wget libx11-dev libxt-dev libxmu-dev libxpm-dev
+        run: sudo apt-get install -y cmake build-essential wget libx11-dev libxt-dev libxmu-dev libxpm-dev libxp-dev
 
       - name: Download MaXX and its dependencies
         run: wget -c https://s3.ca-central-1.amazonaws.com/cdn.maxxinteractive.com/maxx-desktop-installer/MaXX-Desktop-v2.2.0-LINUX-x86_64-tar.gz
