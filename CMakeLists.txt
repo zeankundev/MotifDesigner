@@ -20,10 +20,12 @@ set(SOURCES
 # Soon I guess
   src/main.cpp
   src/tests/IMCPasser.cpp
+  src/external/AboutWindow.cpp
 )
 
 set(HEADERS
   include/IMCPasser.h
+  include/Misc.h
 # Yeah again, but this is just a bootstrap ;)
 )
 
@@ -31,5 +33,5 @@ add_executable(MotifDesigner ${SOURCES} ${HEADERS})
 
 target_include_directories(MotifDesigner PRIVATE "${MOTIFDESIGNER_GENERAL_PATH}/include")
 target_link_directories(MotifDesigner PRIVATE "${MOTIFDESIGNER_GENERAL_PATH}/lib64")
-target_link_libraries(MotifDesigner PRIVATE Xm Xt X11)
+target_link_libraries(MotifDesigner PRIVATE Xm Xt X11 Xpm)
 target_include_directories(MotifDesigner PRIVATE ${PROJECT_SOURCE_DIR}/include)
