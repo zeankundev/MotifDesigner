@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 4.0)
 project(MotifDesigner VERSION 0.5 LANGUAGES CXX)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # We'll compile with -lXm, -lXt and -lX11 later on, these are required.
@@ -18,9 +19,11 @@ find_library(MOTIF_LIBRARY NAMES Xm HINTS "${MOTIFDESIGNER_GENERAL_PATH}/lib64")
 set(SOURCES
 # Soon I guess
   src/main.cpp
+  src/tests/IMCPasser.cpp
 )
 
 set(HEADERS
+  include/IMCPasser.h
 # Yeah again, but this is just a bootstrap ;)
 )
 
