@@ -3,6 +3,6 @@
 
 using namespace std;
 
-void IMCPasser::TestStdOut(char* str) {
+void IMCPasser::TestStdOut(std::string str) {
     cout << str << endl;
 }
