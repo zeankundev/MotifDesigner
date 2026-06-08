@@ -55,7 +55,7 @@ build_appimage() {
     touch appimage/motifdesigner.png
 
     echo "--> Step 1: Running linuxdeploy..."
-    ./linuxdeploy-x86_64.AppImage \
+    LD_LIBRARY_PATH="/opt/MaXX/lib64:$LD_LIBRARY_PATH" ./linuxdeploy-x86_64.AppImage \
         --appdir "$INSTALL_DIR" \
         --executable "$INSTALL_DIR/usr/bin/MotifDesigner" \
         --icon-file=appimage/motifdesigner.png \

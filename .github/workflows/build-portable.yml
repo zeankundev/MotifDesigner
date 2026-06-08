@@ -24,9 +24,6 @@ jobs:
       - name: Extract MaXX to /opt
         run: sudo tar -xzf MaXX-Desktop-v2.2.0-LINUX-x86_64-tar.gz -C /opt
 
-      - name: Use alternate LD path
-        run: export LD_LIBRARY_PATH="/opt/MaXX/lib64:$LD_LIBRARY_PATH"
-
       - name: Build AppImage
         run: chmod +x ./shortcuts.sh && ./shortcuts.sh appimage
 
