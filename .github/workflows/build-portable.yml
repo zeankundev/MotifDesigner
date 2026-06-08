@@ -16,7 +16,7 @@ jobs:
         run: sudo apt-get install -y cmake build-essential wget libx11-dev libxt-dev libxmu-dev libxpm-dev x11proto-dev libxext-dev libx11-dev xutils-dev x11proto-core-dev
 
       - name: Set up X11 Print
-        run: sudo mkdir -p /usr/include/X11/extensions && sudo touch /usr/include/X11/extensions/Print.h
+        run: sudo mkdir -p /usr/include/X11/extensions && sudo cp include/Print.h /usr/include/X11/extensions/
 
       - name: Download MaXX and its dependencies
         run: wget -c https://s3.ca-central-1.amazonaws.com/cdn.maxxinteractive.com/maxx-desktop-installer/MaXX-Desktop-v2.2.0-LINUX-x86_64-tar.gz
