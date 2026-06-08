@@ -25,35 +25,51 @@ build_appimage() {
     echo "--> Installing to temporary AppDir..."
     DESTDIR="$INSTALL_DIR" cmake --install "$BUILD_DIR" --prefix "/usr"
 
-    echo "--> Fetching linuxdeploy and runtime cache..."
+    echo "--> Fetching deployment tools..."
     if [ ! -f "linuxdeploy-x86_64.AppImage" ]; then
         wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
         chmod +x linuxdeploy-x86_64.AppImage
     fi
 
-    # CACHE THE RUNTIME: Download it locally so linuxdeploy doesn't fetch it every time
+    if [ ! -f "appimagetool-x86_64.AppImage" ]; then
+        wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+        chmod +x appimagetool-x86_64.AppImage
+    fi
+
     if [ ! -f "runtime-x86_64" ]; then
-        echo "--> Downloading AppImage runtime cache..."
         wget -q https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64
     fi
 
-    echo "--> Preparing Desktop Entries..."
-    mkdir -p "$INSTALL_DIR/usr/share/applications"
-    echo -e "[Desktop Entry]\nType=Application\nName=MotifDesigner\nExec=MotifDesigner\nIcon=motifdesigner\nCategories=Utility;" > "$INSTALL_DIR/usr/share/applications/motifdesigner.desktop"
+    # === NEW: BUNDLE THE MOTIF/MaXX ASSETS ===
+    echo "--> Bundling MaXX Theme & Scheme assets..."
+    # We copy them into appdir/usr/share/X11/schemes inside your bundle
+    mkdir -p "$INSTALL_DIR/usr/share/X11"
+    if [ -d "/opt/MaXX/share/X11/schemes" ]; then
+        cp -r /opt/MaXX/share/X11/schemes "$INSTALL_DIR/usr/share/X11/"
+    else
+        echo "Warning: /opt/MaXX/share/X11/schemes not found. Themes won't bundle!"
+    fi
 
-    echo "--> Running linuxdeploy (Offline/Fast mode)..."
+    echo "--> Preparing AppDir assets..."
+    mkdir -p appimage
+    touch appimage/motifdesigner.png
 
-    # We export this environment variable so linuxdeploy uses our local downloaded file
-    export APPIMAGE_EXTRACTED_RUNTIME=$(pwd)/runtime-x86_64
-
-    OUTPUT=MotifDesigner-x86_64.AppImage ./linuxdeploy-x86_64.AppImage \
+    echo "--> Step 1: Running linuxdeploy..."
+    ./linuxdeploy-x86_64.AppImage \
         --appdir "$INSTALL_DIR" \
         --executable "$INSTALL_DIR/usr/bin/MotifDesigner" \
-        --output appimage \
         --icon-file=appimage/motifdesigner.png \
         --desktop-file="$INSTALL_DIR/usr/share/applications/motifdesigner.desktop"
 
-    echo "--> Success! Created MotifDesigner-x86_64.AppImage"
+    echo "--> Step 2: Running appimagetool..."
+    export EXTRA_MKSQUASHFS_ARGS="-progress -processor $(nproc)"
+
+    ./appimagetool-x86_64.AppImage \
+        --runtime-file "$(pwd)/runtime-x86_64" \
+        "$INSTALL_DIR" \
+        MotifDesigner-x86_64.AppImage
+
+    echo "--> Success!"
 }
 
 # Command routing
