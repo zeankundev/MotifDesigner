@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up dependencies
-        run: sudo apt-get install -y cmake build-essential wget libx11-dev libxt-dev libxmu-dev libxpm-dev x11proto-dev libxext-dev libx11-dev xutils-dev x11proto-core-dev
+        run: sudo apt-get install -y cmake libfuse2 build-essential wget libx11-dev libxt-dev libxmu-dev libxpm-dev x11proto-dev libxext-dev libx11-dev xutils-dev x11proto-core-dev
 
       - name: Set up X11 Print
         run: sudo mkdir -p /usr/include/X11/extensions && sudo cp include/Print.h /usr/include/X11/extensions/
