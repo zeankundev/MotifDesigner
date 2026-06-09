@@ -30,6 +30,7 @@ set(SOURCES
   src/tests/IMCPasser.cpp
   src/external/AboutWindow.cpp
   src/utils/XPMPixmapManager.cpp
+  src/components/Toolbar.cpp
 )
 
 add_executable(MotifDesigner ${SOURCES})

@@ -14,6 +14,7 @@ class PixmapManager {
             Display *display;
         } PixmapWithMask;
         static void ExposeCallback(Widget w, XtPointer clientData, XtPointer callData);
+        static Pixmap XpmToPixmap(Widget reference, char **xpmData);
         static PixmapWithMask ScalePixmapWithMask(Display *display, Pixmap source,
                                                   Pixmap sourceMask,
                                                   unsigned int srcWidth, unsigned int srcHeight,

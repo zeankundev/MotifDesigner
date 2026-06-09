@@ -1,4 +1,8 @@
 #include "PixmapManager.h"
+#include <X11/Intrinsic.h>
+#include <X11/X.h>
+#include <X11/Xlib.h>
+#include <X11/xpm.h>
 #include <Xm/XmStrDefs.h>
 #include <cstdlib>
 
@@ -187,4 +191,62 @@ PixmapManager::PixmapWithMask PixmapManager::ScalePixmapWithMask(Display *displa
     if (srcMaskImage) XDestroyImage(srcMaskImage);
 
     return result;
+}
+
+Pixmap PixmapManager::XpmToPixmap(Widget reference, char **xpmData) {
+    Display *display = XtDisplay(reference);
+    Window root = RootWindowOfScreen(XtScreen(reference));
+
+    Pixmap srcPixmap = None;
+    Pixmap mask = None;
+    XpmAttributes attributes;
+    memset(&attributes, 0, sizeof(XpmAttributes));
+
+    /* Request size information so we can composite the pixmap onto a
+       background-colored destination using the mask for transparency. */
+    attributes.valuemask = XpmVisual | XpmColormap | XpmDepth | XpmSize;
+    attributes.visual = DefaultVisual(display, DefaultScreen(display));
+    attributes.colormap = DefaultColormap(display, DefaultScreen(display));
+    attributes.depth = DefaultDepth(display, DefaultScreen(display));
+
+    int status = XpmCreatePixmapFromData(display, root, xpmData, &srcPixmap, &mask, &attributes);
+    if (status != XpmSuccess || srcPixmap == None) {
+        if (srcPixmap != None) XFreePixmap(display, srcPixmap);
+        if (mask != None) XFreePixmap(display, mask);
+        return None;
+    }
+
+    /* Create a destination pixmap filled with the reference widget's background
+       and copy the source pixmap onto it using the mask so transparent areas
+       remain showing the background. This produces a single pixmap that will
+       visually appear transparent when used as a label pixmap. */
+    Pixmap dst = XCreatePixmap(display, root, attributes.width, attributes.height, attributes.depth);
+    if (dst == None) {
+        XFreePixmap(display, srcPixmap);
+        if (mask != None) XFreePixmap(display, mask);
+        return None;
+    }
+
+    Pixel bgPixel = 0;
+    XtVaGetValues(reference, XmNbackground, &bgPixel, NULL);
+
+    GC gcFill = XCreateGC(display, dst, 0, NULL);
+    XSetForeground(display, gcFill, bgPixel);
+    XFillRectangle(display, dst, gcFill, 0, 0, attributes.width, attributes.height);
+
+    if (mask != None) {
+        GC gcCopy = XCreateGC(display, dst, 0, NULL);
+        XSetClipMask(display, gcCopy, mask);
+        XSetClipOrigin(display, gcCopy, 0, 0);
+        XCopyArea(display, srcPixmap, dst, gcCopy, 0, 0, attributes.width, attributes.height, 0, 0);
+        XFreeGC(display, gcCopy);
+    } else {
+        XCopyArea(display, srcPixmap, dst, gcFill, 0, 0, attributes.width, attributes.height, 0, 0);
+    }
+
+    XFreeGC(display, gcFill);
+    XFreePixmap(display, srcPixmap);
+    if (mask != None) XFreePixmap(display, mask);
+
+    return dst;
 }

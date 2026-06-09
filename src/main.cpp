@@ -1,5 +1,6 @@
 #include <Xm/Xm.h>
 #include <Xm/Form.h>
+#include "Components.h"
 #include "IMCPasser.h"
 #include "Misc.h"
 #include <X11/Shell.h>
@@ -23,26 +24,7 @@ Widget InitializeUI(Widget parent) {
     int n = 0;
     Widget mainLayout = XmCreateForm(parent, (char*)"mainLayout", args, 0);
     XtManageChild(mainLayout);
-    /* Attach the button to the form and set offsets. Form ignores XmNx/XmNy so use
-       attachment + offsets to control absolute positioning inside the Form. */
-    XtSetArg(args[n], XmNx, 30); n++;
-    XtSetArg(args[n], XmNy, 30); n++;
-    XtSetArg(args[n], XmNwidth, 200); n++;
-    XtSetArg(args[n], XmNheight, 30); n++;
-    XtSetArg(args[n], XmNlabelString, XmStringCreateLocalized((char*)"Send to IMC passer as test")); n++;
-    Widget testButton = XmCreatePushButton(mainLayout, (char*)"testButton", args, n);
-    XtManageChild(testButton);
-    XtAddCallback(testButton, XmNactivateCallback, ButtonPushCallback, NULL);
-
-    n = 0;
-    XtSetArg(args[n], XmNx, 30); n++;
-    XtSetArg(args[n], XmNy, 90); n++;
-    XtSetArg(args[n], XmNwidth, 200); n++;
-    XtSetArg(args[n], XmNheight, 30); n++;
-    XtSetArg(args[n], XmNlabelString, XmStringCreateLocalized((char*)"Show About Section")); n++;
-    Widget aboutButton = XmCreatePushButton(mainLayout, (char*)"aboutButton", args, n);
-    XtManageChild(aboutButton);
-    XtAddCallback(aboutButton, XmNactivateCallback, ShowAboutCallback, NULL);
+    Components::RenderToolbar(mainLayout);
     return mainLayout;
 }
 
