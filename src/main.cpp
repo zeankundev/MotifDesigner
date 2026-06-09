@@ -1,3 +1,4 @@
+#include <Xm/Display.h>
 #include <Xm/Xm.h>
 #include <Xm/Form.h>
 #include "Components.h"
@@ -33,6 +34,8 @@ int main(int argc, char **argv) {
         XmNwidth, 1024,
         XmNheight, 600,
         NULL);
+    Widget display = XmGetXmDisplay(XtDisplay(shell));
+    XtVaSetValues(display, XmNtoolTipEnable, True, NULL);
     InitializeUI(shell);
     XtRealizeWidget(shell);
     XtAppMainLoop(context);

@@ -3,6 +3,7 @@
 #include "../xpm/PushButtonIcon.xpm"
 #include "PixmapManager.h"
 #include <X11/Composite.h>
+#include <X11/ICE/ICElib.h>
 #include <X11/Intrinsic.h>
 #include <Xm/Form.h>
 #include <Xm/Frame.h>
@@ -14,8 +15,8 @@
 class ToolbarButtons {
     public:
         // Keep the static method signature and allow stacking without caller-side variables.
-        static void CreateToolbarButton(Widget parent, char **xpmData, char *name, void (*callback)(Widget, XtPointer, XtPointer)) {
-            Arg args[16];
+        static void CreateToolbarButton(Widget parent, char **xpmData, char *name, void (*callback)(Widget, XtPointer, XtPointer), char *tooltip = NULL) {
+            Arg args[32];
             int n = 0;
             Pixmap pixmap = PixmapManager::XpmToPixmap(parent, xpmData);
             if (pixmap == None) return;
@@ -50,6 +51,13 @@ class ToolbarButtons {
 
             // Always attach left to the form for a vertical toolbar
             XtSetArg(args[n], XmNleftAttachment, XmATTACH_FORM); n++;
+            XtSetArg(args[n], XmNtoolTipEnable, True); n++;
+            XtSetArg(args[n], XmNtraversalOn, True); n++;
+
+            // Add tooltip for accessibility
+            if (tooltip != NULL) {
+                XtSetArg(args[n], XmNtoolTipString, XmStringCreateLocalized(tooltip)); n++;
+            }
 
             Widget button = XmCreatePushButton(parent, name, args, n);
             XtAddCallback(button, XmNactivateCallback, callback, NULL);
@@ -83,13 +91,14 @@ Widget Components::RenderToolbar(Widget parent) {
 
     n = 0;
     /* Add inner padding so children inside the Form have breathing room. */
-    XtSetArg(args[n], XmNmarginWidth, 6); n++;
-    XtSetArg(args[n], XmNmarginHeight, 6); n++;
+    XtSetArg(args[n], XmNmarginWidth, 4); n++;
+    XtSetArg(args[n], XmNmarginHeight, 4); n++;
+    XtSetArg(args[n], XmNwidth, 36); n++;
     Widget toolbarForm = XmCreateForm(mainToolbar, (char*)"ToolbarForm", args, n);
     XtManageChild(toolbarForm);
 
-    ToolbarButtons::CreateToolbarButton(toolbarForm, SelectIcon, (char*)"SelectButton", SelectButtonCallback);
-    ToolbarButtons::CreateToolbarButton(toolbarForm, PushButtonIcon, (char*)"PushButton", PushButtonCallback);
+    ToolbarButtons::CreateToolbarButton(toolbarForm, SelectIcon, (char*)"SelectButton", SelectButtonCallback, "Select Component");
+    ToolbarButtons::CreateToolbarButton(toolbarForm, PushButtonIcon, (char*)"PushButton", PushButtonCallback, "Add Push Button");
 
     return mainToolbar;
 }
