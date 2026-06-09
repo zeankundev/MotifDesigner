@@ -34,8 +34,8 @@ int main(int argc, char **argv) {
         &context, "MotifDesigner",
         NULL, 0, &argc, argv, NULL,
         sessionShellWidgetClass,
-        XmNwidth, 300,
-        XmNheight, 300,
+        XmNwidth, 1024,
+        XmNheight, 600,
         NULL);
     InitializeUI(shell);
     XtRealizeWidget(shell);
