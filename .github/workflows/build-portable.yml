@@ -1,4 +1,4 @@
-name: Build AppImage
+name: Build AppImages
 
 on:
   push:
@@ -9,26 +9,40 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        variant: [GenericMotif, IRIX] # Run both configurations side-by-side
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up dependencies
-        run: sudo apt-get install -y cmake libfuse2 build-essential wget libx11-dev libxt-dev libxmu-dev libxpm-dev x11proto-dev libxext-dev libx11-dev xutils-dev x11proto-core-dev
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libfuse2 build-essential wget \
+            libx11-dev libxt-dev libxmu-dev libxpm-dev \
+            x11proto-dev libxext-dev xutils-dev x11proto-core-dev \
+            libmotif-dev # <--- Adds generic open-source motif libraries
 
-      - name: Set up X11 Print
+      - name: Setup Legacy X11 Print Header Stub
         run: sudo mkdir -p /usr/include/X11/extensions && sudo cp include/Print.h /usr/include/X11/extensions/
 
-      - name: Download MaXX and its dependencies
-        run: wget -c https://s3.ca-central-1.amazonaws.com/cdn.maxxinteractive.com/maxx-desktop-installer/MaXX-Desktop-v2.2.0-LINUX-x86_64-tar.gz
+      - name: Install MaXX Ecosystem Dependencies (MaXX Variant Only)
+        if: matrix.variant == 'IRIX'
+        run: |
+          wget -c https://s3.ca-central-1.amazonaws.com/cdn.maxxinteractive.com/maxx-desktop-installer/MaXX-Desktop-v2.2.0-LINUX-x86_64-tar.gz
+          sudo tar -xzf MaXX-Desktop-v2.2.0-LINUX-x86_64-tar.gz -C /opt
 
-      - name: Extract MaXX to /opt
-        run: sudo tar -xzf MaXX-Desktop-v2.2.0-LINUX-x86_64-tar.gz -C /opt
+      - name: Compile and Bundle AppImage
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          chmod +x ./shortcuts.sh
+          ./shortcuts.sh appimage
 
-      - name: Build AppImage
-        run: chmod +x ./shortcuts.sh && ./shortcuts.sh appimage
-
-      - name: Upload AppImage
+      - name: Upload Finished Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AppImage
-          path: MotifDesigner-x86_64.AppImage
+          name: MotifDesigner-${{ matrix.variant }}
+          path: MotifDesigner-${{ matrix.variant }}-x86_64.AppImage
+# sudo mkdir -p /usr/include/X11/extensions && sudo cp include/Print.h /usr/include/X11/extensions/

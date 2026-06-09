@@ -19,57 +19,59 @@ build_project() {
 }
 
 build_appimage() {
-    build_project
+    # Check if we should use MaXX configuration
+    rm -rf "$BUILD_DIR" "$INSTALL_DIR" linuxdeploy-x86_64.AppImage .cache appdir
+    if [ "$VARIANT" = "IRIX" ]; then
+        echo "Building Variant: IRIX"
+        CMAKE_FLAGS="-DUSE_MAXX_DESKTOP=ON"
+        APPIMAGE_NAME="MotifDesigner-IRIX-x86_64.AppImage"
+        export LD_LIBRARY_PATH="/opt/MaXX/lib64:$LD_LIBRARY_PATH"
+    else
+        echo "Building Variant: GenericMotif"
+        CMAKE_FLAGS="-DUSE_MAXX_DESKTOP=OFF"
+        APPIMAGE_NAME="MotifDesigner-GenericMotif-x86_64.AppImage"
+    fi
 
-    rm -rf "$INSTALL_DIR"
-    echo "--> Installing to temporary AppDir..."
+    rm -rf "$BUILD_DIR" "$INSTALL_DIR"
+
+    # Configure and build
+    cmake -S . -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release $CMAKE_FLAGS
+    cmake --build "$BUILD_DIR"
     DESTDIR="$INSTALL_DIR" cmake --install "$BUILD_DIR" --prefix "/usr"
 
-    echo "--> Fetching deployment tools..."
+    # Fetch tool downloads...
     if [ ! -f "linuxdeploy-x86_64.AppImage" ]; then
         wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
         chmod +x linuxdeploy-x86_64.AppImage
     fi
-
     if [ ! -f "appimagetool-x86_64.AppImage" ]; then
         wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
         chmod +x appimagetool-x86_64.AppImage
     fi
-
     if [ ! -f "runtime-x86_64" ]; then
         wget -q https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64
     fi
 
-    # === NEW: BUNDLE THE MOTIF/MaXX ASSETS ===
-    echo "--> Bundling MaXX Theme & Scheme assets..."
-    # We copy them into appdir/usr/share/X11/schemes inside your bundle
-    mkdir -p "$INSTALL_DIR/usr/share/X11"
-    if [ -d "/opt/MaXX/share/X11/schemes" ]; then
-        cp -r /opt/MaXX/share/X11/schemes "$INSTALL_DIR/usr/share/X11/"
-    else
-        echo "Warning: /opt/MaXX/share/X11/schemes not found. Themes won't bundle!"
-    fi
+    # Asset staging
+    mkdir -p "$INSTALL_DIR/usr/share/applications"
+    echo -e "[Desktop Entry]\nType=Application\nName=MotifDesigner\nExec=MotifDesigner\nIcon=motifdesigner\nCategories=Utility;" > "$INSTALL_DIR/usr/share/applications/motifdesigner.desktop"
+    mkdir -p appimage && touch appimage/motifdesigner.png
 
-    echo "--> Preparing AppDir assets..."
-    mkdir -p appimage
-    touch appimage/motifdesigner.png
-
-    echo "--> Step 1: Running linuxdeploy..."
-    LD_LIBRARY_PATH="/opt/MaXX/lib64:$LD_LIBRARY_PATH" ./linuxdeploy-x86_64.AppImage \
+    # Step 1: Run linuxdeploy (Using extract-and-run to ensure FUSE bypass)
+    ./linuxdeploy-x86_64.AppImage --appimage-extract-and-run \
         --appdir "$INSTALL_DIR" \
         --executable "$INSTALL_DIR/usr/bin/MotifDesigner" \
         --icon-file=appimage/motifdesigner.png \
         --desktop-file="$INSTALL_DIR/usr/share/applications/motifdesigner.desktop"
 
-    echo "--> Step 2: Running appimagetool..."
+    # Step 2: Assemble AppImage with appimagetool
     export EXTRA_MKSQUASHFS_ARGS="-progress -processor $(nproc)"
-
-    ./appimagetool-x86_64.AppImage \
+    ./appimagetool-x86_64.AppImage --appimage-extract-and-run \
         --runtime-file "$(pwd)/runtime-x86_64" \
         "$INSTALL_DIR" \
-        MotifDesigner-x86_64.AppImage
+        "$APPIMAGE_NAME"
 
-    echo "--> Success!"
+    echo "--> Success! Created $APPIMAGE_NAME"
 }
 
 # Command routing
