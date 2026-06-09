@@ -11,10 +11,6 @@
 
 using namespace std;
 
-void ButtonPushCallback(Widget w, XtPointer clientData, XtPointer callData) {
-    IMCPasser::TestStdOut("Hello while clicking!");
-}
-
 void ShowAboutCallback(Widget w, XtPointer clientData, XtPointer callData) {
     MiscFunctions::ShowAboutDialog(w);
 }

@@ -26,10 +26,12 @@ endif()
 
 # Sources
 set(SOURCES
+# Soon I guess
   src/main.cpp
   src/tests/IMCPasser.cpp
   src/external/AboutWindow.cpp
   src/utils/XPMPixmapManager.cpp
+  # components
   src/components/Toolbar.cpp
 )
 
