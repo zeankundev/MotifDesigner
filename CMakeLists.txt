@@ -33,6 +33,7 @@ set(SOURCES
   src/utils/XPMPixmapManager.cpp
   # components
   src/components/Toolbar.cpp
+  src/components/Menubar.cpp
 )
 
 add_executable(MotifDesigner ${SOURCES})

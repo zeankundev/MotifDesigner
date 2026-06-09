@@ -19,9 +19,31 @@ void ShowAboutCallback(Widget w, XtPointer clientData, XtPointer callData) {
 Widget InitializeUI(Widget parent) {
     Arg args[10];
     int n = 0;
+
+    // Create main layout that contains menubar and editor layouts
     Widget mainLayout = XmCreateForm(parent, (char*)"mainLayout", args, 0);
     XtManageChild(mainLayout);
-    Components::RenderToolbar(mainLayout);
+
+    // Create menubar layout (fixed height, full width)
+    n = 0;
+    XtSetArg(args[n], XmNtopAttachment, XmATTACH_FORM); n++;
+    XtSetArg(args[n], XmNleftAttachment, XmATTACH_FORM); n++;
+    XtSetArg(args[n], XmNrightAttachment, XmATTACH_FORM); n++;
+    Widget menubarLayout = XmCreateForm(mainLayout, (char*)"menubarLayout", args, n);
+    XtManageChild(menubarLayout);
+    Components::RenderMenubar(menubarLayout);
+
+    // Create editor layout (stretches to bottom and sides)
+    n = 0;
+    XtSetArg(args[n], XmNtopAttachment, XmATTACH_WIDGET); n++;
+    XtSetArg(args[n], XmNtopWidget, menubarLayout); n++;
+    XtSetArg(args[n], XmNleftAttachment, XmATTACH_FORM); n++;
+    XtSetArg(args[n], XmNrightAttachment, XmATTACH_FORM); n++;
+    XtSetArg(args[n], XmNbottomAttachment, XmATTACH_FORM); n++;
+    Widget editorLayout = XmCreateForm(mainLayout, (char*)"editorLayout", args, n);
+    XtManageChild(editorLayout);
+    Components::RenderToolbar(editorLayout);
+
     return mainLayout;
 }
 
