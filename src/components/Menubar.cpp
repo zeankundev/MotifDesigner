@@ -77,7 +77,11 @@ Widget Components::RenderMenubar(Widget parent) {
             Widget menuItem = XmCreatePushButton(pulldown, (char*)menuItems[i].contents[j].title, args, n);
             XtManageChild(menuItem);
 
-            // Note: You'll still need to hook up your callbacks here using XtAddCallback!
+            if (menuItems[i].contents[j].takesWidget && menuItems[i].contents[j].callback.w != nullptr) {
+                XtAddCallback(menuItem, XmNactivateCallback, (XtCallbackProc)menuItems[i].contents[j].callback.w, nullptr);
+            } else if (!menuItems[i].contents[j].takesWidget && menuItems[i].contents[j].callback.v != nullptr) {
+                XtAddCallback(menuItem, XmNactivateCallback, (XtCallbackProc)menuItems[i].contents[j].callback.v, nullptr);
+            }
         }
 
         // 3. Attach the pulldown menu to a Cascade Button on the Menubar

@@ -38,6 +38,7 @@ void MiscFunctions::ShowAboutDialog(Widget parent) {
     XtSetArg(args[n], XmNminHeight, 230); n++;
     XtSetArg(args[n], XmNmaxWidth, 350); n++;
     XtSetArg(args[n], XmNmaxHeight, 230); n++;
+    XtSetArg(args[n], XmNtitle, "About MotifDesigner"); n++;
     XtSetValues(dialogShell, args, n);
 
     Display *display = XtDisplay(parent);
