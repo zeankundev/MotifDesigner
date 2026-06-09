@@ -33,6 +33,9 @@ int main(int argc, char **argv) {
         sessionShellWidgetClass,
         XmNwidth, 1024,
         XmNheight, 600,
+        XmNminWidth, 900,
+        XmNminHeight, 600,
+        XmNtitle, "MotifDesigner - Something modern for your X11",
         NULL);
     Widget display = XmGetXmDisplay(XtDisplay(shell));
     XtVaSetValues(display, XmNtoolTipEnable, True, NULL);
