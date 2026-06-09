@@ -6,6 +6,7 @@
 #include <Xm/CascadeB.h>
 #include <Xm/Xm.h>
 #include <Xm/XmStrDefs.h>
+#include <cstdlib>
 
 typedef void (*ActionCallbackVoid)();
 typedef void (*ActionCallbackWidget)(Widget);
@@ -37,7 +38,7 @@ Widget Components::RenderMenubar(Widget parent) {
         MENU_ITEM_VOID("New Project", nullptr),
         MENU_ITEM_VOID("Open Project", nullptr),
         MENU_ITEM_VOID("Save Visual File", nullptr),
-        MENU_ITEM_VOID("Exit", nullptr),
+        MENU_ITEM_VOID("Exit", std::quick_exit),
     };
 
     MenuContent workflowContents[] = {
