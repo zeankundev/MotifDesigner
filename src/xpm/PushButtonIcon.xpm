@@ -1,0 +1,26 @@
+/* XPM */
+static char* PushButtonIcon[] = {
+"20 20 2 1",
+"   c None",
+"A  c #000000",
+"                    ",
+"                    ",
+"  AAAAAAAAAAAAAAAA  ",
+"  AA            AA  ",
+"  A AAAAAAAAAAAA A  ",
+"  A A          A A  ",
+"  A A          A A  ",
+"  A A          A A  ",
+"  A A          A A  ",
+"  A A   A      A A  ",
+"  A A  A A     A A  ",
+"  A    A A     A A  ",
+"    A  A AA    A A  ",
+"   A A A A AA  A A  ",
+"   A  AA A A A A A  ",
+"    A AA A A A A A  ",
+"    A        A  AA  ",
+"    A        A AAA  ",
+"     A      A       ",
+"      AAAAAA        "
+};
