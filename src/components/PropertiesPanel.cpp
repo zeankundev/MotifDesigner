@@ -10,12 +10,20 @@
 #include <Xm/TextF.h>
 #include <Xm/XmAll.h>
 #include <cstddef>
+#include <regex>
 
 class PropertiesPanelField {
     private:
         Widget field;
+        char* lastValidValue;
     public:
-        PropertiesPanelField& RenderField(Widget parent, const char* label, const char* hint, const char* value, void(*callback)(Widget, XtPointer, XtPointer)) {
+        PropertiesPanelField() : field(NULL), lastValidValue(NULL) {}
+        ~PropertiesPanelField() {
+            if (lastValidValue != NULL) {
+                XtFree(lastValidValue);
+            }
+        }
+        PropertiesPanelField& RenderField(Widget parent, const char* label, const char* hint, const char* value, void(*callback)(Widget, XtPointer, XtPointer), bool requireStrictValues = false) {
             Arg args[16];
             int n = 0;
 
@@ -55,8 +63,56 @@ class PropertiesPanelField {
             XtSetArg(args[n], XmNvalue, value); n++;
 
             field = XmCreateTextField(propertyFieldParent, (char*)"field", args, n);
-            if (callback != NULL) {
-                XtAddCallback(field, XmNvalueChangedCallback, callback, NULL);
+
+            // Store initial value as the last known valid value
+            if (lastValidValue != NULL) {
+                XtFree(lastValidValue);
+            }
+            lastValidValue = XtNewString(value);
+
+            // Create a callback wrapper that validates and manages state
+            struct CallbackData {
+                void (*userCallback)(Widget, XtPointer, XtPointer);
+                char** pLastValidValue;
+                bool requireStrict;
+                std::regex* validationRegex;
+            };
+
+            CallbackData* cbData = new CallbackData{
+                callback,
+                &lastValidValue,
+                requireStrictValues,
+                new std::regex("^[A-Za-z0-9]+$")
+            };
+
+            auto ValidateBeforeCallback = [](Widget w, XtPointer clientData, XtPointer callData) {
+                CallbackData* data = static_cast<CallbackData*>(clientData);
+                const char* currentValue = XmTextFieldGetString(w);
+
+                if (data->requireStrict) {
+                    // Validate against regex pattern
+                    if (!std::regex_match(currentValue, *(data->validationRegex))) {
+                        // Invalid: restore last known valid value and skip callback
+                        XmTextFieldSetString(w, *(data->pLastValidValue));
+                        XtFree((char*)currentValue);
+                        return;
+                    }
+                }
+
+                // Valid: update last known value and execute callback
+                if (*(data->pLastValidValue) != NULL) {
+                    XtFree(*(data->pLastValidValue));
+                }
+                *(data->pLastValidValue) = XtNewString(currentValue);
+
+                if (data->userCallback != NULL) {
+                    data->userCallback(w, NULL, callData);
+                }
+                XtFree((char*)currentValue);
+            };
+
+            if (callback != NULL || requireStrictValues) {
+                XtAddCallback(field, XmNactivateCallback, ValidateBeforeCallback, (XtPointer)cbData);
             }
             XtManageChild(field);
             return *this;
@@ -92,7 +148,7 @@ Widget Components::RenderPropertiesPanel(Widget parent) {
     XtSetArg(args[n], XmNwidth, 160); n++;
     Widget propertiesForm = XmCreateForm(propertiesPanel, (char*)"PropsForm", args, n);
     XtManageChild(propertiesForm);
-    instanceName.RenderField(propertiesForm, (char*)"instanceName", (char*)"Instance Name", (char*)"", NULL);
+    instanceName.RenderField(propertiesForm, (char*)"instanceName", (char*)"Instance Name", (char*)"PushButton1", NULL, true);
     valueContent.RenderField(propertiesForm, (char*)"valueContent", (char*)"Value Content", (char*)"", NULL);
     xPos.RenderField(propertiesForm, (char*)"xPos", (char*)"X Position", (char*)"", NULL);
     yPos.RenderField(propertiesForm, (char*)"yPos", (char*)"Y Position", (char*)"", NULL);

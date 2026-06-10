@@ -43,6 +43,7 @@ Widget Components::RenderMenubar(Widget parent) {
 
     MenuContent workflowContents[] = {
         MENU_ITEM_VOID("Open C++ Editor", nullptr),
+        MENU_ITEM_VOID("Regenerate Visual .h file", nullptr),
         MENU_ITEM_VOID("Build and Run", nullptr),
         MENU_ITEM_VOID("Build Only", nullptr),
         MENU_ITEM_VOID("Package to AppImage", nullptr),
