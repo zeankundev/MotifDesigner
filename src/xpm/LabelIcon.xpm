@@ -1,0 +1,26 @@
+/* XPM */
+static char* LabelIcon[] = {
+"20 20 2 1",
+"   c None",
+"A  c #000000",
+"                    ",
+"                    ",
+"     A              ",
+"     A              ",
+"    A A             ",
+"    A A             ",
+"    A A             ",
+"   A   A            ",
+"   A   A            ",
+"   A   A            ",
+"   A   A    AAAA    ",
+"  AAAAAAA       A   ",
+"  A     A       A   ",
+"  A     A   AAAAA   ",
+"  A     A  A    A   ",
+"  A     A  A    A   ",
+"  A     A  A   AA   ",
+"  A     A   AAA AA  ",
+"                    ",
+"                    "
+};

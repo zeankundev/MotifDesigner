@@ -1,6 +1,7 @@
 #include "Components.h"
 #include "../xpm/SelectIcon.xpm"
 #include "../xpm/PushButtonIcon.xpm"
+#include "../xpm/LabelIcon.xpm"
 #include "PixmapManager.h"
 #include <X11/Composite.h>
 #include <X11/ICE/ICElib.h>
@@ -60,7 +61,9 @@ class ToolbarButtons {
             }
 
             Widget button = XmCreatePushButton(parent, name, args, n);
-            XtAddCallback(button, XmNactivateCallback, callback, NULL);
+            if (callback != nullptr) {
+                XtAddCallback(button, XmNactivateCallback, callback, NULL);
+            }
             XtManageChild(button);
 
             // If children was allocated by Motif, free it. According to Motif, XmNchildren returns
@@ -98,7 +101,8 @@ Widget Components::RenderToolbar(Widget parent) {
     XtManageChild(toolbarForm);
 
     ToolbarButtons::CreateToolbarButton(toolbarForm, SelectIcon, (char*)"SelectButton", SelectButtonCallback, "Select Component");
-    ToolbarButtons::CreateToolbarButton(toolbarForm, PushButtonIcon, (char*)"PushButton", PushButtonCallback, "Add Push Button");
+    ToolbarButtons::CreateToolbarButton(toolbarForm, PushButtonIcon, (char*)"PushButton", nullptr, "Add Push Button");
+    ToolbarButtons::CreateToolbarButton(toolbarForm, LabelIcon, (char*)"LabelButton", nullptr, "Add Label");
 
     return mainToolbar;
 }

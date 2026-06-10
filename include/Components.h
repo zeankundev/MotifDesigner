@@ -5,5 +5,6 @@ class Components {
     public:
         static Widget RenderToolbar(Widget parent);
         static Widget RenderMenubar(Widget parent);
+        static Widget RenderPropertiesPanel(Widget parent);
 };
 #endif

@@ -43,6 +43,7 @@ Widget InitializeUI(Widget parent) {
     Widget editorLayout = XmCreateForm(mainLayout, (char*)"editorLayout", args, n);
     XtManageChild(editorLayout);
     Components::RenderToolbar(editorLayout);
+    Components::RenderPropertiesPanel(editorLayout);
 
     return mainLayout;
 }

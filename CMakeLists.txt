@@ -34,6 +34,7 @@ set(SOURCES
   # components
   src/components/Toolbar.cpp
   src/components/Menubar.cpp
+  src/components/PropertiesPanel.cpp
 )
 
 add_executable(MotifDesigner ${SOURCES})
