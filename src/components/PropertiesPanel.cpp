@@ -82,7 +82,7 @@ class PropertiesPanelField {
                 callback,
                 &lastValidValue,
                 requireStrictValues,
-                new std::regex("^[A-Za-z0-9]+$")
+                new std::regex("^[A-Za-z0-9_]+$")
             };
 
             auto ValidateBeforeCallback = [](Widget w, XtPointer clientData, XtPointer callData) {
