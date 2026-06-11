@@ -15,6 +15,16 @@
 #include <string>
 #include <vector>
 
+enum class ResizeHandle {
+    Nothing,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight
+};
+
+ResizeHandle activeHandle = ResizeHandle::Nothing;
+
 // Stores that are canvas only
 std::vector<CanvasInterface::EditorWidgetInstance> widgets;
 CanvasInterface::ToolTypes activeTool = CanvasInterface::ToolTypes::Select;
@@ -42,6 +52,10 @@ GC textContext;
 GC selectBorderGraphicsContext;
 bool graphicsContextsInitialized = false;
 bool isDeletingWidget = false;
+bool requiresRedraw = false;
+
+static XtIntervalId pendingRedrawTimer = 0;
+const unsigned int REDRAW_DEBOUNCE_MS = 16;
 
 void CanvasInterface::InitializeGraphicContexts(Widget canvas) {
     if (graphicsContextsInitialized) {
@@ -114,6 +128,28 @@ void CanvasInterface::DrawBevel(Display* display, Window win, int x, int y, int 
     XDrawLine(display, win, bottomContext, x+width-1, y+height-1, x, y+height-1);
 }
 
+static void FixedRedrawCb(XtPointer clientData, XtIntervalId* id) {
+    if (g_canvas) {
+        g_canvas->RefreshCanvas();
+    }
+    pendingRedrawTimer = 0;
+}
+
+void CanvasInterface::ScheduleRedraw() {
+    if (pendingRedrawTimer != 0) {
+        return;
+    }
+
+    if (this->canvas && XtIsRealized(this->canvas)) {
+        pendingRedrawTimer = XtAppAddTimeOut(
+            XtWidgetToApplicationContext(this->canvas),
+            REDRAW_DEBOUNCE_MS,
+            FixedRedrawCb,
+            nullptr
+        );
+    }
+}
+
 void CanvasInterface::DrawWidgetElement(Display* display, Window win, const EditorWidgetInstance& widget) {
     if (!display || !win || !widgetBackgroundContext || !textContext) return;
     XFillRectangle(display, win, widgetBackgroundContext, widget.x, widget.y, widget.width, widget.height);
@@ -166,6 +202,9 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
     if (widget.selected) {
         XDrawRectangle(display, win, selectBorderGraphicsContext, widget.x - 2, widget.y - 2, widget.width + 4, widget.height + 4);
         XFillRectangle(display, win, textContext, widget.x + widget.width - 2, widget.y + widget.height - 2, resizeHandleSize, resizeHandleSize);
+        XFillRectangle(display, win, textContext, widget.x + widget.width - 2, widget.y - 6, resizeHandleSize, resizeHandleSize);
+        XFillRectangle(display, win, textContext, widget.x - 6, widget.y + widget.height - 2, resizeHandleSize, resizeHandleSize);
+        XFillRectangle(display, win, textContext, widget.x - 6, widget.y - 6, resizeHandleSize, resizeHandleSize);
     }
 }
 
@@ -263,19 +302,53 @@ void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY) {
         for (int i = widgets.size() - 1; i >= 0; --i) {
             const auto& w = widgets[i];
             if (w.selected) {
-                int handleX = w.x + w.width - 2;
-                int handleY = w.y + w.height - 2;
-                if (mouseX >= handleX && mouseX <= handleX + resizeHandleSize &&
-                mouseY >= handleY && mouseY <= handleY + resizeHandleSize) {
+                // Define the X and Y coordinates for the edges
+                int leftX   = w.x - 2;
+                int rightX  = w.x + w.width - 2;
+                int topY    = w.y - 2;
+                int bottomY = w.y + w.height - 2;
+
+                ResizeHandle hitHandle = ResizeHandle::Nothing;
+
+                // 1. Top-Left
+                if (mouseX >= leftX && mouseX <= leftX + resizeHandleSize &&
+                    mouseY >= topY  && mouseY <= topY + resizeHandleSize) {
+                    hitHandle = ResizeHandle::TopLeft;
+                }
+                // 2. Top-Right
+                else if (mouseX >= rightX && mouseX <= rightX + resizeHandleSize &&
+                        mouseY >= topY   && mouseY <= topY + resizeHandleSize) {
+                    hitHandle = ResizeHandle::TopRight;
+                }
+                // 3. Bottom-Left
+                else if (mouseX >= leftX   && mouseX <= leftX + resizeHandleSize &&
+                        mouseY >= bottomY && mouseY <= bottomY + resizeHandleSize) {
+                    hitHandle = ResizeHandle::BottomLeft;
+                }
+                // 4. Bottom-Right
+                else if (mouseX >= rightX   && mouseX <= rightX + resizeHandleSize &&
+                        mouseY >= bottomY && mouseY <= bottomY + resizeHandleSize) {
+                    hitHandle = ResizeHandle::BottomRight;
+                }
+
+                if (hitHandle != ResizeHandle::Nothing) {
                     isResizing = true;
+                    activeHandle = hitHandle; // Store this to use during the mouseMove event
                     dragStartX = mouseX;
                     dragStartY = mouseY;
+                    
+                    // Critical: If resizing from top or left, you must also store original X/Y
+                    widget_originalX = w.x;
+                    widget_originalY = w.y;
                     widget_originalWidth = w.width;
                     widget_originalHeight = w.height;
+                    
                     g_canvas->SelectWidget(i);
                     return;
                 }
             }
+
+            // --- Dragging logic remains the same ---
             if (mouseX >= w.x && mouseX <= w.x + w.width &&
                 mouseY >= w.y && mouseY <= w.y + w.height) {
                 isDragging = true;
@@ -350,28 +423,69 @@ void CanvasInterface::HandleCanvasMouseMove(int mouseX, int mouseY) {
         }
         if (newX < 0) newX = 0;
         if (newY < 0) newY = 0;
-        w.x = newX;
-        w.y = newY;
+        if (w.x != newX || w.y != newY) {
+            w.x = newX;
+            w.y = newY;
+            requiresRedraw = true;
+        }
         g_canvas->SetPropertyPanel();
-        g_canvas->RefreshCanvas();
     } else if (isResizing) {
-        int newWidth = widget_originalWidth + dx;
-        int newHeight = widget_originalHeight + dy;
+        int newWidth = widget_originalWidth;
+        int newHeight = widget_originalHeight;
+        int newX = widget_originalX;
+        int newY = widget_originalY;
 
+        // Handle each corner differently
+        if (activeHandle == ResizeHandle::TopLeft) {
+            newX = widget_originalX + dx;
+            newY = widget_originalY + dy;
+            newWidth = widget_originalWidth - dx;
+            newHeight = widget_originalHeight - dy;
+        }
+        else if (activeHandle == ResizeHandle::TopRight) {
+            newY = widget_originalY + dy;
+            newWidth = widget_originalWidth + dx;
+            newHeight = widget_originalHeight - dy;
+        }
+        else if (activeHandle == ResizeHandle::BottomLeft) {
+            newX = widget_originalX + dx;
+            newWidth = widget_originalWidth - dx;
+            newHeight = widget_originalHeight + dy;
+        }
+        else if (activeHandle == ResizeHandle::BottomRight) {
+            newWidth = widget_originalWidth + dx;
+            newHeight = widget_originalHeight + dy;
+        }
+
+        // Apply grid snapping
         if (snapToGrid) {
+            newX = (newX / gridSize) * gridSize;
+            newY = (newY / gridSize) * gridSize;
             newWidth = (newWidth / gridSize) * gridSize;
             newHeight = (newHeight / gridSize) * gridSize;
         }
 
+        // Apply minimum size constraints
         if (newWidth < 20) newWidth = 20;
         if (newHeight < 10) newHeight = 10;
 
-        w.width = newWidth;
-        w.height = newHeight;
-        g_canvas->SetPropertyPanel();
-        g_canvas->RefreshCanvas();
+        // Prevent negative position
+        if (newX < 0) newX = 0;
+        if (newY < 0) newY = 0;
+
+        if (w.x != newX || w.y != newY || w.width != newWidth || w.height != newHeight) {
+            w.x = newX;
+            w.y = newY;
+            w.width = newWidth;
+            w.height = newHeight;
+            requiresRedraw = true;
+        }
     }
-    g_canvas->RefreshCanvas();
+    if (requiresRedraw) {
+        g_canvas->SetPropertyPanel();
+        g_canvas->ScheduleRedraw();
+        requiresRedraw = false;
+    }
 }
 
 void CanvasInterface::HandleCanvasMouseUp() {

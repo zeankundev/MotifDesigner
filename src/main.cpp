@@ -27,7 +27,7 @@ Widget InitializeUI(Widget parent) {
     Widget mainLayout = XmCreateForm(parent, (char*)"mainLayout", args, 0);
     XtManageChild(mainLayout);
 
-    // Create menubar layout (fixed height, full width)
+    // 1. Create menubar layout (fixed height, attached to top, left, right)
     n = 0;
     XtSetArg(args[n], XmNtopAttachment, XmATTACH_FORM); n++;
     XtSetArg(args[n], XmNleftAttachment, XmATTACH_FORM); n++;
@@ -36,15 +36,27 @@ Widget InitializeUI(Widget parent) {
     XtManageChild(menubarLayout);
     Components::RenderMenubar(menubarLayout);
 
-    // Create editor layout (stretches to bottom and sides)
+    // 2. Create status bar layout FIRST (or just define it so editor can link to it)
+    // We attach it to the BOTTOM of the main form.
     n = 0;
-    XtSetArg(args[n], XmNtopAttachment, XmATTACH_WIDGET); n++;
-    XtSetArg(args[n], XmNtopWidget, menubarLayout); n++;
+    XtSetArg(args[n], XmNbottomAttachment, XmATTACH_FORM); n++; // Anchored to bottom
     XtSetArg(args[n], XmNleftAttachment, XmATTACH_FORM); n++;
     XtSetArg(args[n], XmNrightAttachment, XmATTACH_FORM); n++;
-    XtSetArg(args[n], XmNbottomAttachment, XmATTACH_FORM); n++;
+    Widget statusBarLayout = XmCreateForm(mainLayout, (char*)"statusBarLayout", args, n);
+    XtManageChild(statusBarLayout);
+    StatusBar::RenderStatusBar(statusBarLayout);
+
+    // 3. Create editor layout (stretches to fill the space in between)
+    n = 0;
+    XtSetArg(args[n], XmNtopAttachment, XmATTACH_WIDGET); n++;
+    XtSetArg(args[n], XmNtopWidget, menubarLayout); n++;        // Bottom of menubar
+    XtSetArg(args[n], XmNbottomAttachment, XmATTACH_WIDGET); n++;
+    XtSetArg(args[n], XmNbottomWidget, statusBarLayout); n++;    // Top of status bar
+    XtSetArg(args[n], XmNleftAttachment, XmATTACH_FORM); n++;
+    XtSetArg(args[n], XmNrightAttachment, XmATTACH_FORM); n++;
     Widget editorLayout = XmCreateForm(mainLayout, (char*)"editorLayout", args, n);
     XtManageChild(editorLayout);
+    
     Widget toolbar = Components::RenderToolbar(editorLayout);
     Widget propertiesPanel = Components::RenderPropertiesPanel(editorLayout);
     Components::RenderCanvas(editorLayout, toolbar, propertiesPanel);
