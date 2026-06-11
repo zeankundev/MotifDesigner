@@ -42,8 +42,9 @@ Widget InitializeUI(Widget parent) {
     XtSetArg(args[n], XmNbottomAttachment, XmATTACH_FORM); n++;
     Widget editorLayout = XmCreateForm(mainLayout, (char*)"editorLayout", args, n);
     XtManageChild(editorLayout);
-    Components::RenderToolbar(editorLayout);
-    Components::RenderPropertiesPanel(editorLayout);
+    Widget toolbar = Components::RenderToolbar(editorLayout);
+    Widget propertiesPanel = Components::RenderPropertiesPanel(editorLayout);
+    Components::RenderCanvas(editorLayout, toolbar, propertiesPanel);
 
     return mainLayout;
 }

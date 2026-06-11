@@ -35,6 +35,7 @@ set(SOURCES
   src/components/Toolbar.cpp
   src/components/Menubar.cpp
   src/components/PropertiesPanel.cpp
+  src/components/Canvas.cpp
 )
 
 add_executable(MotifDesigner ${SOURCES})
