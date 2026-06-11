@@ -165,7 +165,7 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
     }
     if (widget.selected) {
         XDrawRectangle(display, win, selectBorderGraphicsContext, widget.x - 2, widget.y - 2, widget.width + 4, widget.height + 4);
-        XFillRectangle(display, win, textContext, widget.x - 2, widget.y - 2, resizeHandleSize, resizeHandleSize);
+        XFillRectangle(display, win, textContext, widget.x + widget.width - 2, widget.y + widget.height - 2, resizeHandleSize, resizeHandleSize);
     }
 }
 
