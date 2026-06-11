@@ -38,21 +38,21 @@ Widget Components::RenderMenubar(Widget parent) {
     Logger::log("Initializing menubar");
 
     MenuContent fileContents[] = {
-        MENU_ITEM_VOID("New Project", nullptr),
+        // MENU_ITEM_VOID("New Project", nullptr),
         MENU_ITEM_VOID("New Visual File", nullptr),
-        MENU_ITEM_VOID("Open Project", nullptr),
+        // MENU_ITEM_VOID("Open Project", nullptr),
         MENU_ITEM_VOID("Open Visual File", nullptr),
         MENU_ITEM_VOID("Save Visual File", nullptr),
         MENU_ITEM_VOID("Exit", std::quick_exit),
     };
 
     MenuContent workflowContents[] = {
-        MENU_ITEM_VOID("Open C++ Editor", nullptr),
-        MENU_ITEM_VOID("Regenerate Visual .h file", nullptr),
+        // MENU_ITEM_VOID("Open C++ Editor", nullptr),
+        // MENU_ITEM_VOID("Regenerate Visual .h file", nullptr),
         MENU_ITEM_VOID("Save Individual .h file", nullptr),
-        MENU_ITEM_VOID("Build and Run", nullptr),
-        MENU_ITEM_VOID("Build Only", nullptr),
-        MENU_ITEM_VOID("Package to AppImage", nullptr),
+        // MENU_ITEM_VOID("Build and Run", nullptr),
+        // MENU_ITEM_VOID("Build Only", nullptr),
+        // MENU_ITEM_VOID("Package to AppImage", nullptr),
     };
 
     MenuContent helpContents[] = {
