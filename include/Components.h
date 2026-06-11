@@ -122,10 +122,14 @@ class PropertiesPanelField {
             if (field == NULL) return;
             if (value == NULL) return;
 
+            // Assume programmatic updates are always valid
+            lastValidValue = value;
+            
             Arg args[1];
             XtSetArg(args[0], XmNvalue, value);
             XtSetValues(field, args, 1);
         }
+        
         std::string GetValue() {
             Logger::log("Getting value of field");
             if (field == NULL) return "";
