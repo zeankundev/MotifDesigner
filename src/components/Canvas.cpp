@@ -365,8 +365,9 @@ void CanvasInterface::ApplyPropertyPanelChanges() {
 
 void CanvasInterface::DeleteSelectedWidget() {
     if (selectedIndex >= 0 && selectedIndex < (int)widgets.size()) {
-        widgets.erase(widgets.begin() + selectedIndex);
         SelectWidget(-1);
+        widgets.erase(widgets.begin() + selectedIndex);
+        RefreshCanvas();
     }
 }
 
