@@ -15,7 +15,7 @@ build_project() {
     fi
     echo "--> Building project..."
     cmake -S . -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
-    cmake --build "$BUILD_DIR" --target all
+    cmake --build "$BUILD_DIR" --target all -j$(nproc)
 }
 
 build_appimage() {
