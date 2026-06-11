@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(MotifDesigner VERSION 0.5 LANGUAGES CXX)
+project(MotifDesigner VERSION 0.7 LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -52,6 +52,11 @@ target_link_libraries(MotifDesigner PRIVATE
     ${X11_Xt_LIB}
     ${X11_X11_LIB}
     Xpm
+)
+
+target_compile_definitions(MotifDesigner PRIVATE
+    PROJECT_VERSION_STR="${PROJECT_VERSION}"
+    PROJECT_NAME_STR="${PROJECT_NAME}"
 )
 
 # Install rules

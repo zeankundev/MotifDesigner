@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstring>
 #include <cstdlib>
+#include <string>
 #include "../xpm/MotifDesignerLogo.xpm"
 #include "Xm/Xm.h"
 
@@ -99,7 +100,8 @@ void MiscFunctions::ShowAboutDialog(Widget parent) {
     XtSetArg(args[n], XmNtopOffset, 10); n++;
     XtSetArg(args[n], XmNleftAttachment, XmATTACH_FORM); n++;
     XtSetArg(args[n], XmNleftOffset, 20); n++;
-    XtSetArg(args[n], XmNlabelString, XmStringCreateLocalized((char*)"MotifDesigner v0.5")); n++;
+    std::string label = std::string("MotifDesigner v") + PROJECT_VERSION_STR;
+    XtSetArg(args[n], XmNlabelString, XmStringCreateLocalized(const_cast<char*>(label.c_str()))); n++;
     Widget aboutText = XmCreateLabel(aboutDialog, (char*)"AboutText", args, n);
     XtManageChild(aboutText);
 
