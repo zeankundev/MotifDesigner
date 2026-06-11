@@ -1,3 +1,4 @@
+#include "CanvasInterface.h"
 #include "Components.h"
 #include "../xpm/SelectIcon.xpm"
 #include "../xpm/PushButtonIcon.xpm"
@@ -73,11 +74,11 @@ class ToolbarButtons {
 };
 
 void SelectButtonCallback(Widget widget, XtPointer clientData, XtPointer callData) {
-    std::cout << "Test select?" << std::endl;
+    g_canvas->SetTool(CanvasInterface::ToolTypes::Select);
 }
 
 void PushButtonCallback(Widget widget, XtPointer clientData, XtPointer callData) {
-    std::cout << "Test push?" << std::endl;
+    g_canvas->SetTool(CanvasInterface::ToolTypes::Button);
 }
 
 Widget Components::RenderToolbar(Widget parent) {
@@ -101,7 +102,7 @@ Widget Components::RenderToolbar(Widget parent) {
     XtManageChild(toolbarForm);
 
     ToolbarButtons::CreateToolbarButton(toolbarForm, SelectIcon, (char*)"SelectButton", SelectButtonCallback, "Select Component");
-    ToolbarButtons::CreateToolbarButton(toolbarForm, PushButtonIcon, (char*)"PushButton", nullptr, "Add Push Button");
+    ToolbarButtons::CreateToolbarButton(toolbarForm, PushButtonIcon, (char*)"PushButton", PushButtonCallback, "Add Push Button");
     ToolbarButtons::CreateToolbarButton(toolbarForm, LabelIcon, (char*)"LabelButton", nullptr, "Add Label");
 
     return mainToolbar;
