@@ -3,6 +3,7 @@
 #include "../xpm/SelectIcon.xpm"
 #include "../xpm/PushButtonIcon.xpm"
 #include "../xpm/LabelIcon.xpm"
+#include "../xpm/TextFieldIcon.xpm"
 #include "PixmapManager.h"
 #include <X11/Composite.h>
 #include <X11/ICE/ICElib.h>
@@ -81,6 +82,14 @@ void PushButtonCallback(Widget widget, XtPointer clientData, XtPointer callData)
     g_canvas->SetTool(CanvasInterface::ToolTypes::Button);
 }
 
+void LabelButtonCallback(Widget widget, XtPointer clientData, XtPointer callData) {
+    g_canvas->SetTool(CanvasInterface::ToolTypes::Label);
+}
+
+void TextFieldButtonCallback(Widget widget, XtPointer clientData, XtPointer callData) {
+    g_canvas->SetTool(CanvasInterface::ToolTypes::TextField);
+}
+
 Widget Components::RenderToolbar(Widget parent) {
     Arg args[10];
     int n = 0;
@@ -103,7 +112,8 @@ Widget Components::RenderToolbar(Widget parent) {
 
     ToolbarButtons::CreateToolbarButton(toolbarForm, SelectIcon, (char*)"SelectButton", SelectButtonCallback, "Select Component");
     ToolbarButtons::CreateToolbarButton(toolbarForm, PushButtonIcon, (char*)"PushButton", PushButtonCallback, "Add Push Button");
-    ToolbarButtons::CreateToolbarButton(toolbarForm, LabelIcon, (char*)"LabelButton", nullptr, "Add Label");
+    ToolbarButtons::CreateToolbarButton(toolbarForm, LabelIcon, (char*)"LabelButton", LabelButtonCallback, "Add Label");
+    ToolbarButtons::CreateToolbarButton(toolbarForm, TextFieldIcon, (char*)"TextFieldButton", TextFieldButtonCallback, "Add Text Field");
 
     return mainToolbar;
 }

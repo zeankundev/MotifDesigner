@@ -167,4 +167,9 @@ class PropertiesPanel {
         static PropertiesPanelField height;
         static std::string GetWidgetValue(PropertiesPanelField field);
 };
+class StatusBar {
+    public:
+        static Widget RenderStatusBar(Widget parent);
+        static void UpdateStatusBar(const char* message);
+};
 #endif

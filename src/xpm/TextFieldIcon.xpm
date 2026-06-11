@@ -1,0 +1,26 @@
+/* XPM */
+static char* TextFieldIcon[] = {
+"20 20 2 1",
+"   c None",
+"A  c #000000",
+"                    ",
+"                    ",
+"  AAAAAAAAA AA AA   ",
+"  AAAAAAAAA   A     ",
+"  AAAAAAAAAAA A     ",
+"  AAAAAAAAAAA A     ",
+"  AAAAAAAAAAA A     ",
+"  AAAAAAAAAAA A     ",
+"  AAAAAAAAAAA A     ",
+"  AA    AAAAA A     ",
+"  AAAAAA AAAA A     ",
+"  AAAAAA AAAA A     ",
+"  AA     AAAA A     ",
+"  A AAAA AAAA A     ",
+"  A AAAA AAAA A     ",
+"  A AAA  AAAA A     ",
+"  AA   A  A   A     ",
+"  AAAAAAAAA AA AA   ",
+"                    ",
+"                    "
+};
