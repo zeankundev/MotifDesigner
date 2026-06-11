@@ -22,15 +22,50 @@ class Components {
 class PropertiesPanelField {
     private:
         Widget field;
-        char* lastValidValue;
-    public:
-        PropertiesPanelField() : field(NULL), lastValidValue(NULL) {}
-        ~PropertiesPanelField() {
-            if (lastValidValue != NULL) {
-                // XtFree(lastValidValue);
+        std::string lastValidValue;
+        bool requireStrictValues;
+        void(*externalCallback)(Widget, XtPointer, XtPointer);
+        
+        static void InternalValidationCallback(Widget w, XtPointer clientData, XtPointer callData) {
+            PropertiesPanelField* pThis = (PropertiesPanelField*)clientData;
+            if (!pThis->requireStrictValues) {
+                // If strict validation not required, just update and call external callback
+                char* widgetValue = XmTextFieldGetString(w);
+                if (widgetValue != NULL) {
+                    pThis->lastValidValue = widgetValue;
+                }
+                if (pThis->externalCallback != NULL) {
+                    pThis->externalCallback(w, clientData, callData);
+                }
+                return;
+            }
+            
+            // Get the current field value
+            char* widgetValue = XmTextFieldGetString(w);
+            if (widgetValue == NULL) return;
+            
+            std::string currentValue(widgetValue);
+            
+            // Validate against strict format
+            if (!pThis->ValidateStrictFormat(currentValue.c_str())) {
+                // Invalid - revert to last valid value
+                pThis->UpdateFieldValue(pThis->lastValidValue.c_str());
+                return;
+            }
+            
+            // Valid - update last valid value and call external callback
+            pThis->lastValidValue = currentValue;
+            if (pThis->externalCallback != NULL) {
+                pThis->externalCallback(w, clientData, callData);
             }
         }
-        PropertiesPanelField& RenderField(Widget parent, const char* label, const char* hint, const char* value, void(*callback)(Widget, XtPointer, XtPointer), bool requireStrictValues = false) {
+        
+    public:
+        PropertiesPanelField() : field(NULL), lastValidValue(""), requireStrictValues(false), externalCallback(NULL) {}
+        ~PropertiesPanelField() {
+            // No cleanup needed - std::string manages its own memory
+        }
+        PropertiesPanelField& RenderField(Widget parent, const char* label, const char* hint, const char* value, void(*callback)(Widget, XtPointer, XtPointer), bool strict = false) {
             Arg args[16];
             int n = 0;
 
@@ -72,10 +107,13 @@ class PropertiesPanelField {
             field = XmCreateTextField(propertyFieldParent, (char*)"field", args, n);
 
             // Store initial value as the last known valid value
-            lastValidValue = XtNewString(value);
-
-            if (callback != NULL) {
-                XtAddCallback(field, XmNactivateCallback, callback, (XtPointer)this);
+            lastValidValue = (value != NULL) ? value : "";
+            requireStrictValues = strict;
+            externalCallback = callback;
+            
+            // Always attach internal validation callback if strict mode is enabled or external callback exists
+            if (strict || callback != NULL) {
+                XtAddCallback(field, XmNactivateCallback, InternalValidationCallback, (XtPointer)this);
             }
             XtManageChild(field);
             return *this;
@@ -106,6 +144,7 @@ class PropertiesPanelField {
             if (value == NULL) return false;
             return std::regex_match(value, nameRegex);
         }
+
 
 };
 class PropertiesPanel {
