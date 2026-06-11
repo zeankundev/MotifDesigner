@@ -47,6 +47,7 @@ public:
     static void HandleCanvasMouseDown(int mouseX, int mouseY);
     static void HandleCanvasMouseMove(int mouseX, int mouseY);
     static void HandleCanvasMouseUp();
+    void ShiftComponentPositionByKeystroke(int directionX, int directionY);
     void ApplyPropertyPanelChanges();
     void DeleteSelectedWidget();
     static void ChangeActiveTool(ToolTypes tool);

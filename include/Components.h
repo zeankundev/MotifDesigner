@@ -3,6 +3,8 @@
 #include "Logger.h"
 #include <X11/Intrinsic.h>
 #include <Xm/Form.h>
+#include <X11/Intrinsic.h>
+#include <Xm/MessageB.h>
 #include <Xm/Label.h>
 #include <Xm/TextF.h>
 #include <Xm/Xm.h>
@@ -49,6 +51,10 @@ class PropertiesPanelField {
             // Validate against strict format
             if (!pThis->ValidateStrictFormat(currentValue.c_str())) {
                 // Invalid - revert to last valid value
+                Arg args[1];
+                XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)"Invalid format! Use only letters, numbers, and underscores."));
+                Widget errorDialog = XmCreateErrorDialog(XtParent(w), (char*)"ErrorDialog", args, 1);
+                XtManageChild(errorDialog);
                 pThis->UpdateFieldValue(pThis->lastValidValue.c_str());
                 return;
             }

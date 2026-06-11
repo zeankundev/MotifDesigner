@@ -239,6 +239,20 @@ void CanvasInterface::SelectWidget(int index) {
     RefreshCanvas();
 }
 
+void CanvasInterface::ShiftComponentPositionByKeystroke(int directionX, int directionY) {
+    if (selectedIndex < 0 || selectedIndex >= (int)widgets.size()) return;
+    auto& w = widgets[selectedIndex];
+    // Clamp the movement to x = 0, y= 0
+    int newX = w.x + directionX;
+    int newY = w.y + directionY;
+    if (newX < 0) newX = 0;
+    if (newY < 0) newY = 0;
+    w.x = newX;
+    w.y = newY;
+    SetPropertyPanel();
+    RefreshCanvas();
+}
+
 void CanvasInterface::SetTool(ToolTypes tool) {
     activeTool = tool;
 }
@@ -434,6 +448,14 @@ void CanvasKeyPressCallback(Widget w, XtPointer clientData, XEvent* event, Boole
         if (sym == XK_Delete || sym == XK_BackSpace) {
             Logger::log("Either Del or Bksp were pressed, deleting widget");
             g_canvas->DeleteSelectedWidget();
+        } else if (sym == XK_Up) {
+            g_canvas->ShiftComponentPositionByKeystroke(0, -10);
+        } else if (sym == XK_Down) {
+            g_canvas->ShiftComponentPositionByKeystroke(0, 10);
+        } else if (sym == XK_Left) {
+            g_canvas->ShiftComponentPositionByKeystroke(-10, 0);
+        } else if (sym == XK_Right) {
+            g_canvas->ShiftComponentPositionByKeystroke(10, 0);
         }
     }
 }
