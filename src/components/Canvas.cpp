@@ -313,6 +313,8 @@ void CanvasInterface::HandleCanvasMouseMove(int mouseX, int mouseY) {
         }
         if (newX < 0) newX = 0;
         if (newY < 0) newY = 0;
+        w.x = newX;
+        w.y = newY;
         g_canvas->SetPropertyPanel();
         g_canvas->RefreshCanvas();
     } else if (isResizing) {
@@ -332,6 +334,7 @@ void CanvasInterface::HandleCanvasMouseMove(int mouseX, int mouseY) {
         g_canvas->SetPropertyPanel();
         g_canvas->RefreshCanvas();
     }
+    g_canvas->RefreshCanvas();
 }
 
 void CanvasInterface::HandleCanvasMouseUp() {
@@ -417,11 +420,11 @@ Widget Components::RenderCanvas(Widget parent, Widget leftWidget, Widget rightWi
     n = 0;
     Widget canvasField = XmCreateDrawingArea(canvasFrame, (char*)"CanvasDrawingArea", args, n);
     XtManageChild(canvasField);
-    
+
     // Create and initialize the global canvas instance
     g_canvas = new CanvasInterface();
     g_canvas->canvas = canvasField;
-    
+
     XtAddCallback(canvasField, XmNexposeCallback, ExposeCanvasCallback, (XtPointer)g_canvas);
     XtAddCallback(canvasField, XmNinputCallback, CanvasInputCallback, (XtPointer)g_canvas);
     XtAddEventHandler(canvasField, PointerMotionMask, False, [](Widget w, XtPointer clientData, XEvent* event, Boolean* continueDispatch) {

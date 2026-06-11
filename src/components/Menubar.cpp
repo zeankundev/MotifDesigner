@@ -1,4 +1,5 @@
 #include "Components.h"
+#include "Logger.h"
 #include "Misc.h"
 #include <X11/Intrinsic.h>
 #include <Xm/PushB.h>
@@ -33,6 +34,8 @@ struct MenubarItem {
 Widget Components::RenderMenubar(Widget parent) {
     Arg args[20];
     int n = 0;
+
+    Logger::log("Initializing menubar");
 
     MenuContent fileContents[] = {
         MENU_ITEM_VOID("New Project", nullptr),

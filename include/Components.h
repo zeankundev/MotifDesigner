@@ -1,5 +1,6 @@
 #ifndef COMPONENTS_H
 #define COMPONENTS_H
+#include "Logger.h"
 #include <X11/Intrinsic.h>
 #include <Xm/Form.h>
 #include <Xm/Label.h>
@@ -8,6 +9,8 @@
 #include <Xm/XmStrDefs.h>
 #include <iostream>
 #include <regex>
+#include <string>
+
 class Components {
     public:
         static Widget RenderToolbar(Widget parent);
@@ -93,9 +96,11 @@ class PropertiesPanelField {
                 const char* currentValue = XmTextFieldGetString(w);
 
                 if (data->requireStrict) {
+                    Logger::log("Requires strict regex validation");
                     // Validate against regex pattern
                     if (!std::regex_match(currentValue, *(data->validationRegex))) {
                         // Invalid: restore last known valid value and skip callback
+                        Logger::log("Invalid value: restoring last known valid value");
                         XmTextFieldSetString(w, *(data->pLastValidValue));
                         XtFree((char*)currentValue);
                         return;
@@ -104,11 +109,13 @@ class PropertiesPanelField {
 
                 // Valid: update last known value and execute callback
                 if (*(data->pLastValidValue) != NULL) {
+                    Logger::log("Valid: updating last known value");
                     XtFree(*(data->pLastValidValue));
                 }
                 *(data->pLastValidValue) = XtNewString(currentValue);
 
                 if (data->userCallback != NULL) {
+                    Logger::log("Executing defined callback");
                     data->userCallback(w, NULL, callData);
                 }
                 XtFree((char*)currentValue);
@@ -121,11 +128,13 @@ class PropertiesPanelField {
             return *this;
         }
         void UpdateFieldValue(const char* value) {
+            Logger::log(("Requested change of value to " + std::string(value)).c_str());
             Arg args[1];
             XtSetArg(args[0], XmNvalue, value);
             XtSetValues(field, args, 1);
         }
         char* GetValue() {
+            Logger::log("Getting value of field");
             return XmTextFieldGetString(field);
         }
 
