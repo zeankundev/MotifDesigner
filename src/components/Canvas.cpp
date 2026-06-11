@@ -1,5 +1,6 @@
 #include "CanvasInterface.h"
 #include "Components.h"
+#include "Logger.h"
 #include <X11/Composite.h>
 #include <X11/ICE/ICElib.h>
 #include <X11/Intrinsic.h>
@@ -199,10 +200,16 @@ void CanvasInterface::SetPropertyPanel() {
     if (selectedIndex < 0 || selectedIndex >= (int)widgets.size()) return;
     PropertiesPanel::instanceName.UpdateFieldValue(widgets[selectedIndex].name.c_str());
     PropertiesPanel::valueContent.UpdateFieldValue(widgets[selectedIndex].value.c_str());
-    PropertiesPanel::xPos.UpdateFieldValue(std::to_string(widgets[selectedIndex].x).c_str());
-    PropertiesPanel::yPos.UpdateFieldValue(std::to_string(widgets[selectedIndex].y).c_str());
-    PropertiesPanel::width.UpdateFieldValue(std::to_string(widgets[selectedIndex].width).c_str());
-    PropertiesPanel::height.UpdateFieldValue(std::to_string(widgets[selectedIndex].height).c_str());
+    
+    std::string xPosStr = std::to_string(widgets[selectedIndex].x);
+    std::string yPosStr = std::to_string(widgets[selectedIndex].y);
+    std::string widthStr = std::to_string(widgets[selectedIndex].width);
+    std::string heightStr = std::to_string(widgets[selectedIndex].height);
+    
+    PropertiesPanel::xPos.UpdateFieldValue(xPosStr.c_str());
+    PropertiesPanel::yPos.UpdateFieldValue(yPosStr.c_str());
+    PropertiesPanel::width.UpdateFieldValue(widthStr.c_str());
+    PropertiesPanel::height.UpdateFieldValue(heightStr.c_str());
 }
 
 void CanvasInterface::ClearPropertyPanel() {
@@ -359,23 +366,24 @@ void CanvasInterface::HandleCanvasMouseUp() {
 }
 
 void CanvasInterface::ApplyPropertyPanelChanges() {
+    Logger::log("Applying property changes");
     if (selectedIndex < 0 || selectedIndex >= (int)widgets.size()) return;
 
     auto& w = widgets[selectedIndex];
 
-    char* nameStr = PropertiesPanel::GetWidgetValue(PropertiesPanel::instanceName);
-    char* valueStr = PropertiesPanel::GetWidgetValue(PropertiesPanel::valueContent);
-    char* xStr = PropertiesPanel::GetWidgetValue(PropertiesPanel::xPos);
-    char* yStr = PropertiesPanel::GetWidgetValue(PropertiesPanel::yPos);
-    char* widthStr = PropertiesPanel::GetWidgetValue(PropertiesPanel::width);
-    char* heightStr = PropertiesPanel::GetWidgetValue(PropertiesPanel::height);
+    std::string nameStr = PropertiesPanel::GetWidgetValue(PropertiesPanel::instanceName);
+    std::string valueStr = PropertiesPanel::GetWidgetValue(PropertiesPanel::valueContent);
+    std::string xStr = PropertiesPanel::GetWidgetValue(PropertiesPanel::xPos);
+    std::string yStr = PropertiesPanel::GetWidgetValue(PropertiesPanel::yPos);
+    std::string widthStr = PropertiesPanel::GetWidgetValue(PropertiesPanel::width);
+    std::string heightStr = PropertiesPanel::GetWidgetValue(PropertiesPanel::height);
 
-    if (nameStr) { w.name = nameStr; XtFree(nameStr); };
-    if (valueStr) { w.value = valueStr; XtFree(valueStr); };
-    if (xStr) { w.x = atoi(xStr); XtFree(xStr); };
-    if (yStr) { w.y = atoi(yStr); XtFree(yStr); };
-    if (widthStr) { w.width = atoi(widthStr); XtFree(widthStr); };
-    if (heightStr) { w.height = atoi(heightStr); XtFree(heightStr); };
+    if (!nameStr.empty()) { w.name = nameStr; }
+    if (!valueStr.empty()) { w.value = valueStr; }
+    if (!xStr.empty()) { w.x = atoi(xStr.c_str()); }
+    if (!yStr.empty()) { w.y = atoi(yStr.c_str()); }
+    if (!widthStr.empty()) { w.width = atoi(widthStr.c_str()); }
+    if (!heightStr.empty()) { w.height = atoi(heightStr.c_str()); }
     RefreshCanvas();
 }
 

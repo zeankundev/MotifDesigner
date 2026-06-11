@@ -18,6 +18,7 @@ class Components {
         static Widget RenderPropertiesPanel(Widget parent);
         static Widget RenderCanvas(Widget parent, Widget leftWidget, Widget rightWidget);
 };
+
 class PropertiesPanelField {
     private:
         Widget field;
@@ -26,7 +27,7 @@ class PropertiesPanelField {
         PropertiesPanelField() : field(NULL), lastValidValue(NULL) {}
         ~PropertiesPanelField() {
             if (lastValidValue != NULL) {
-                XtFree(lastValidValue);
+                // XtFree(lastValidValue);
             }
         }
         PropertiesPanelField& RenderField(Widget parent, const char* label, const char* hint, const char* value, void(*callback)(Widget, XtPointer, XtPointer), bool requireStrictValues = false) {
@@ -71,71 +72,39 @@ class PropertiesPanelField {
             field = XmCreateTextField(propertyFieldParent, (char*)"field", args, n);
 
             // Store initial value as the last known valid value
-            if (lastValidValue != NULL) {
-                XtFree(lastValidValue);
-            }
             lastValidValue = XtNewString(value);
 
-            // Create a callback wrapper that validates and manages state
-            struct CallbackData {
-                void (*userCallback)(Widget, XtPointer, XtPointer);
-                char** pLastValidValue;
-                bool requireStrict;
-                std::regex* validationRegex;
-            };
-
-            CallbackData* cbData = new CallbackData{
-                callback,
-                &lastValidValue,
-                requireStrictValues,
-                new std::regex("^[A-Za-z0-9_]+$")
-            };
-
-            auto ValidateBeforeCallback = [](Widget w, XtPointer clientData, XtPointer callData) {
-                CallbackData* data = static_cast<CallbackData*>(clientData);
-                const char* currentValue = XmTextFieldGetString(w);
-
-                if (data->requireStrict) {
-                    Logger::log("Requires strict regex validation");
-                    // Validate against regex pattern
-                    if (!std::regex_match(currentValue, *(data->validationRegex))) {
-                        // Invalid: restore last known valid value and skip callback
-                        Logger::log("Invalid value: restoring last known valid value");
-                        XmTextFieldSetString(w, *(data->pLastValidValue));
-                        XtFree((char*)currentValue);
-                        return;
-                    }
-                }
-
-                // Valid: update last known value and execute callback
-                if (*(data->pLastValidValue) != NULL) {
-                    Logger::log("Valid: updating last known value");
-                    XtFree(*(data->pLastValidValue));
-                }
-                *(data->pLastValidValue) = XtNewString(currentValue);
-
-                if (data->userCallback != NULL) {
-                    Logger::log("Executing defined callback");
-                    data->userCallback(w, NULL, callData);
-                }
-                XtFree((char*)currentValue);
-            };
-
-            if (callback != NULL || requireStrictValues) {
-                XtAddCallback(field, XmNactivateCallback, ValidateBeforeCallback, (XtPointer)cbData);
+            if (callback != NULL) {
+                XtAddCallback(field, XmNactivateCallback, callback, (XtPointer)this);
             }
             XtManageChild(field);
             return *this;
         }
         void UpdateFieldValue(const char* value) {
-            Logger::log(("Requested change of value to " + std::string(value)).c_str());
+            if (field == NULL) return;
+            if (value == NULL) return;
+
             Arg args[1];
             XtSetArg(args[0], XmNvalue, value);
             XtSetValues(field, args, 1);
         }
-        char* GetValue() {
+        std::string GetValue() {
             Logger::log("Getting value of field");
-            return XmTextFieldGetString(field);
+            if (field == NULL) return "";
+
+            char* widgetValue = XmTextFieldGetString(field);
+            if (widgetValue == NULL) return "";
+
+            // Create a copy immediately and don't hold the reference
+            std::string result(widgetValue);
+            // Note: DO NOT free widgetValue - it's managed by Motif
+
+            return result;
+        }
+        bool ValidateStrictFormat(const char* value) {
+            static const std::regex nameRegex("^[A-Za-z0-9_]+$");
+            if (value == NULL) return false;
+            return std::regex_match(value, nameRegex);
         }
 
 };
@@ -147,6 +116,6 @@ class PropertiesPanel {
         static PropertiesPanelField yPos;
         static PropertiesPanelField width;
         static PropertiesPanelField height;
-        static char* GetWidgetValue(PropertiesPanelField field);
+        static std::string GetWidgetValue(PropertiesPanelField field);
 };
 #endif

@@ -1,3 +1,4 @@
+#include "CanvasInterface.h"
 #include "Components.h"
 #include <X11/Composite.h>
 #include <X11/Intrinsic.h>
@@ -20,6 +21,10 @@ PropertiesPanelField PropertiesPanel::yPos;
 PropertiesPanelField PropertiesPanel::width;
 PropertiesPanelField PropertiesPanel::height;
 
+void UnisonOnChange(Widget widget, XtPointer clientData, XtPointer callData) {
+    g_canvas->ApplyPropertyPanelChanges();
+}
+
 Widget Components::RenderPropertiesPanel(Widget parent) {
     Arg args[10];
     int n = 0;
@@ -37,14 +42,14 @@ Widget Components::RenderPropertiesPanel(Widget parent) {
     XtSetArg(args[n], XmNwidth, 160); n++;
     Widget propertiesForm = XmCreateForm(propertiesPanel, (char*)"PropsForm", args, n);
     XtManageChild(propertiesForm);
-    PropertiesPanel::instanceName.RenderField(propertiesForm, (char*)"instanceName", (char*)"Instance Name", (char*)"PushButton1", NULL, true);
-    PropertiesPanel::valueContent.RenderField(propertiesForm, (char*)"valueContent", (char*)"Value Content", (char*)"", NULL);
-    PropertiesPanel::xPos.RenderField(propertiesForm, (char*)"xPos", (char*)"X Position", (char*)"", NULL);
-    PropertiesPanel::yPos.RenderField(propertiesForm, (char*)"yPos", (char*)"Y Position", (char*)"", NULL);
-    PropertiesPanel::width.RenderField(propertiesForm, (char*)"width", (char*)"Width", (char*)"", NULL);
-    PropertiesPanel::height.RenderField(propertiesForm, (char*)"height", (char*)"Height", (char*)"", NULL);
+    PropertiesPanel::instanceName.RenderField(propertiesForm, (char*)"instanceName", (char*)"Instance Name", (char*)"", UnisonOnChange, true);
+    PropertiesPanel::valueContent.RenderField(propertiesForm, (char*)"valueContent", (char*)"Value Content", (char*)"", UnisonOnChange);
+    PropertiesPanel::xPos.RenderField(propertiesForm, (char*)"xPos", (char*)"X Position", (char*)"", UnisonOnChange);
+    PropertiesPanel::yPos.RenderField(propertiesForm, (char*)"yPos", (char*)"Y Position", (char*)"", UnisonOnChange);
+    PropertiesPanel::width.RenderField(propertiesForm, (char*)"width", (char*)"Width", (char*)"", UnisonOnChange);
+    PropertiesPanel::height.RenderField(propertiesForm, (char*)"height", (char*)"Height", (char*)"", UnisonOnChange);
     return propertiesPanel;
 }
-char* PropertiesPanel::GetWidgetValue(PropertiesPanelField field) {
+std::string PropertiesPanel::GetWidgetValue(PropertiesPanelField field) {
     return field.GetValue();
 }
