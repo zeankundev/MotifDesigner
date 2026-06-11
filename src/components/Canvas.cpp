@@ -271,9 +271,11 @@ void CanvasInterface::SelectWidget(int index) {
 
     if (selectedIndex >= 0 && selectedIndex < (int)widgets.size()) {
         widgets[selectedIndex].selected = true;
+        StatusBar::UpdateStatusBar("Drag either handles to modify the size, or tackle at the properties panel!");
         SetPropertyPanel();
     } else {
         ClearPropertyPanel();
+        StatusBar::UpdateStatusBar("Select a component to modify its properties");
     }
     RefreshCanvas();
 }
@@ -294,14 +296,23 @@ void CanvasInterface::ShiftComponentPositionByKeystroke(int directionX, int dire
 
 void CanvasInterface::SetTool(ToolTypes tool) {
     activeTool = tool;
+    if (tool == ToolTypes::Select && (selectedIndex < 0 || selectedIndex >= (int)widgets.size())) {
+        StatusBar::UpdateStatusBar("Select a component to modify its properties");
+    } else if (tool == ToolTypes::Select && selectedIndex >= 0 && selectedIndex < (int)widgets.size()) {
+        StatusBar::UpdateStatusBar("Drag either handles to modify the size, or tackle at the properties panel!"); 
+    } else {
+        StatusBar::UpdateStatusBar("Click anywhere on the canvas to create a widget");
+    }
 }
 
 void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY) {
     if (g_canvas == nullptr) return;
     if (activeTool == ToolTypes::Select) {
         for (int i = widgets.size() - 1; i >= 0; --i) {
+            
             const auto& w = widgets[i];
             if (w.selected) {
+                
                 // Define the X and Y coordinates for the edges
                 int leftX   = w.x - 2;
                 int rightX  = w.x + w.width - 2;
@@ -341,8 +352,7 @@ void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY) {
                     widget_originalX = w.x;
                     widget_originalY = w.y;
                     widget_originalWidth = w.width;
-                    widget_originalHeight = w.height;
-                    
+                    widget_originalHeight = w.height; 
                     g_canvas->SelectWidget(i);
                     return;
                 }
