@@ -40,6 +40,7 @@ GC shadowLightContext;
 GC textContext;
 GC selectBorderGraphicsContext;
 bool graphicsContextsInitialized = false;
+bool isDeletingWidget = false;
 
 void CanvasInterface::InitializeGraphicContexts(Widget canvas) {
     if (graphicsContextsInitialized) {
@@ -92,6 +93,8 @@ void CanvasInterface::InitializeGraphicContexts(Widget canvas) {
 }
 
 void CanvasInterface::DrawGrid(Display* display, Window win, int width, int height) {
+    if (!display || !win || !backgroundContext || !gridContext) return;
+    Logger::log("Drawing the grid");
     XFillRectangle(display, win, backgroundContext, 0, 0, width, height);
     for (int x = gridSize; x < width; x+= gridSize) {
         for (int y = gridSize; y < height; y+= gridSize) {
@@ -111,6 +114,7 @@ void CanvasInterface::DrawBevel(Display* display, Window win, int x, int y, int 
 }
 
 void CanvasInterface::DrawWidgetElement(Display* display, Window win, const EditorWidgetInstance& widget) {
+    if (!display || !win || !widgetBackgroundContext || !textContext) return;
     XFillRectangle(display, win, widgetBackgroundContext, widget.x, widget.y, widget.width, widget.height);
 
     switch (widget.type) {
@@ -166,8 +170,15 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
 
 void CanvasInterface::RefreshCanvas() {
     if (!this->canvas || !XtIsRealized(this->canvas)) return;
+
+    // Ensure graphics contexts are initialized
+    CanvasInterface::InitializeGraphicContexts(this->canvas);
+    if (!graphicsContextsInitialized) return;
+
     Display* display = XtDisplay(this->canvas);
     Window win = XtWindow(this->canvas);
+
+    Logger::log("Refreshing the canvas by now!");
 
     Dimension w, h;
     Arg args[2];
@@ -178,11 +189,14 @@ void CanvasInterface::RefreshCanvas() {
 
     CanvasInterface::DrawGrid(display, win, w, h);
     for (const auto& widget : widgets) {
+        Logger::log("Drawing widgets!");
         CanvasInterface::DrawWidgetElement(display, win, widget);
     }
 }
 
 void CanvasInterface::SetPropertyPanel() {
+    Logger::log("Setting property values");
+    if (selectedIndex < 0 || selectedIndex >= (int)widgets.size()) return;
     PropertiesPanel::instanceName.UpdateFieldValue(widgets[selectedIndex].name.c_str());
     PropertiesPanel::valueContent.UpdateFieldValue(widgets[selectedIndex].value.c_str());
     PropertiesPanel::xPos.UpdateFieldValue(std::to_string(widgets[selectedIndex].x).c_str());
@@ -192,6 +206,7 @@ void CanvasInterface::SetPropertyPanel() {
 }
 
 void CanvasInterface::ClearPropertyPanel() {
+    Logger::log("Clearing property values");
     PropertiesPanel::instanceName.UpdateFieldValue("");
     PropertiesPanel::valueContent.UpdateFieldValue("");
     PropertiesPanel::xPos.UpdateFieldValue("");
@@ -201,6 +216,7 @@ void CanvasInterface::ClearPropertyPanel() {
 }
 
 void CanvasInterface::SelectWidget(int index) {
+    Logger::log("Selecting widget");
     if (selectedIndex >= 0 && selectedIndex < (int)widgets.size()) {
         widgets[selectedIndex].selected = false;
     }
@@ -364,11 +380,19 @@ void CanvasInterface::ApplyPropertyPanelChanges() {
 }
 
 void CanvasInterface::DeleteSelectedWidget() {
+    if (isDeletingWidget) return;  // Prevent multiple rapid deletions
+    isDeletingWidget = true;
+
+    Logger::log("Deleting a component");
     if (selectedIndex >= 0 && selectedIndex < (int)widgets.size()) {
+        int indexToDelete = selectedIndex;
+        Logger::log("Selecting widget of -1");
         SelectWidget(-1);
-        widgets.erase(widgets.begin() + selectedIndex);
+        widgets.erase(widgets.begin() + indexToDelete);
         RefreshCanvas();
     }
+
+    isDeletingWidget = false;
 }
 
 // Now the real canvas stuffs
@@ -396,11 +420,12 @@ void CanvasInputCallback(Widget w, XtPointer clientData, XtPointer callData) {
 }
 
 void CanvasKeyPressCallback(Widget w, XtPointer clientData, XEvent* event, Boolean* continueDispatch) {
-    CanvasInterface* canvas = static_cast<CanvasInterface*>(clientData);
+    Logger::log("Key callback fired");
     if (event->type == KeyPress) {
         KeySym sym = XLookupKeysym(&event->xkey, 0);
         if (sym == XK_Delete || sym == XK_BackSpace) {
-            canvas->DeleteSelectedWidget();
+            Logger::log("Either Del or Bksp were pressed, deleting widget");
+            g_canvas->DeleteSelectedWidget();
         }
     }
 }
@@ -419,6 +444,7 @@ Widget Components::RenderCanvas(Widget parent, Widget leftWidget, Widget rightWi
     XtManageChild(canvasFrame);
 
     n = 0;
+    XtSetArg(args[n], XmNtraversalOn, True); n++;
     Widget canvasField = XmCreateDrawingArea(canvasFrame, (char*)"CanvasDrawingArea", args, n);
     XtManageChild(canvasField);
 
@@ -434,6 +460,7 @@ Widget Components::RenderCanvas(Widget parent, Widget leftWidget, Widget rightWi
         }
     }, NULL);
     XtAddEventHandler(canvasField, KeyPressMask, False, CanvasKeyPressCallback, NULL);
+    XtSetKeyboardFocus(canvasField, canvasField);
 
     return canvasFrame;
 }
