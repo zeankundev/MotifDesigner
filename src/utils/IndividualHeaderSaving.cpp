@@ -41,7 +41,7 @@ void ProjectManager::SaveIndividualHeaderFile(Widget parent, std::string pathToS
         ss << "        Widget " << widgetName << ";\n";
     }
 
-    ss  << "        static Widget BuildUserInterface(Widget parent) {\n"
+    ss  << "        Widget BuildUserInterface(Widget parent) {\n"
         << "            Arg args[32];\n"
         << "            int n;\n"
         << "            Widget FormParent = XmCreateForm(parent, (char*)\"FormParent\", NULL, 0);\n";
