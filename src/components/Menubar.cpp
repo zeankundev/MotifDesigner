@@ -9,6 +9,7 @@
 #include <Xm/Xm.h>
 #include <Xm/XmStrDefs.h>
 #include <cstdlib>
+#include <string>
 
 typedef void (*ActionCallbackVoid)();
 typedef void (*ActionCallbackWidget)(Widget);
@@ -31,13 +32,14 @@ struct MenubarItem {
     const MenuContent* contents;
     int contentsCount;
 };
-
+TextDialog dialog;
 void AfterDialogCBTest() {
     Logger::log("Received callback");
+    std::string value = dialog.GetCurrentDialogValue();
+    Logger::log((std::string("Received string: ") + value).c_str());
 }
 void SpawnDialogTest(Widget w, XtPointer clientData, XtPointer callData) {
     Widget parent = (Widget)clientData;
-    TextDialog dialog;
     dialog.SpawnDialogInstance(parent, "Enter a class name.\nThis is required so we can generate proper header files", AfterDialogCBTest);
 }
 

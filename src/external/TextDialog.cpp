@@ -175,4 +175,6 @@ Widget TextDialog::SpawnDialogInstance(Widget parent, std::string message, TextD
     return textDialog;
 }
 
-std::string TextDialog::GetCurrentDialogValue() {}
+std::string TextDialog::GetCurrentDialogValue() {
+    return (std::string)XmTextFieldGetString(textFieldWidget);
+}
