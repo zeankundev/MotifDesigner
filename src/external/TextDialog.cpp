@@ -25,14 +25,14 @@ Widget textFieldWidget = NULL;
 // Heap-allocated in SpawnDialogInstance and freed inside OnSubmitCallback.
 struct DialogContext {
     Widget dialog;
-    void (*userCallback)();
+    void (*userCallback)(Widget, XtPointer, XtPointer);
 };
 
 void OnSubmitCallback(Widget w, XtPointer clientData, XtPointer callData) {
     Logger::log("Executing callback");
     DialogContext* ctx = reinterpret_cast<DialogContext*>(clientData);
     if (ctx->userCallback) {
-        ctx->userCallback();
+        ctx->userCallback(w, clientData, callData);
     }
     XtUnmanageChild(ctx->dialog);
     delete ctx;

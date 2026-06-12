@@ -4,6 +4,7 @@
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <string>
+#include <vector>
 class CanvasInterface {
 public:
     Widget canvas;
@@ -51,6 +52,7 @@ public:
     void ScheduleRedraw();
     void ApplyPropertyPanelChanges();
     void DeleteSelectedWidget();
+    std::vector<EditorWidgetInstance> GetWidgetList();
     static void ChangeActiveTool(ToolTypes tool);
 };
 

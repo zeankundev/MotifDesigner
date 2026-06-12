@@ -1,6 +1,7 @@
 #include "Components.h"
 #include "Logger.h"
 #include "Misc.h"
+#include "ProjectManager.h"
 #include "TextDialog.h"
 #include <X11/Intrinsic.h>
 #include <Xm/PushB.h>
@@ -33,10 +34,10 @@ struct MenubarItem {
     int contentsCount;
 };
 TextDialog dialog;
-void AfterDialogCBTest() {
+void AfterDialogCBTest(Widget w, XtPointer clientData, XtPointer callData) {
     Logger::log("Received callback");
     std::string value = dialog.GetCurrentDialogValue();
-    Logger::log((std::string("Received string: ") + value).c_str());
+    ProjectManager::SaveIndividualHeaderFile(w, "/home/zean", value);
 }
 void SpawnDialogTest(Widget w, XtPointer clientData, XtPointer callData) {
     Widget parent = (Widget)clientData;

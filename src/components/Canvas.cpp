@@ -540,6 +540,9 @@ void CanvasInterface::DeleteSelectedWidget() {
 
     isDeletingWidget = false;
 }
+std::vector<CanvasInterface::EditorWidgetInstance> CanvasInterface::GetWidgetList() {
+    return widgets;
+}
 
 // Now the real canvas stuffs
 void ExposeCanvasCallback(Widget w, XtPointer clientData, XtPointer callData) {

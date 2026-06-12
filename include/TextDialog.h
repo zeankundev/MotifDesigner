@@ -4,7 +4,7 @@
 #include <string>
 class TextDialog {
 public:
-    using DialogCallback = void (*)();
+    using DialogCallback = void (*)(Widget, XtPointer, XtPointer);
     Widget SpawnDialogInstance(Widget parent, std::string message, DialogCallback callback);
     std::string GetCurrentDialogValue();
 };
