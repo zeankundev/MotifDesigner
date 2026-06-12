@@ -77,6 +77,7 @@ void ProjectManager::SaveIndividualHeaderFile(Widget parent, std::string pathToS
     }
     ss  << "            XtManageChild(" << widget.name << ");\n\n";
     }
+    ss  << "            return FormParent;\n";
     ss  << "        }\n";
     ss  << "};\n";
     ss  << "#endif\n";
