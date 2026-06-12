@@ -1,5 +1,6 @@
 #include "TextDialog.h"
 #include "Logger.h"
+#include <X11/Composite.h>
 #include <X11/ICE/ICElib.h>
 #include <X11/Intrinsic.h>
 #include <X11/X.h>
@@ -52,6 +53,8 @@ void ValidateTextValue(Widget w, XtPointer clientData, XtPointer callData) {
         Arg args[1];
         XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)"Invalid format! Use only letters, numbers, and underscores."));
         Widget errorDialog = XmCreateErrorDialog(XtParent(textFieldWidget), (char*)"ErrorDialog", args, 1);
+        Widget helpButton = XmMessageBoxGetChild(errorDialog, XmDIALOG_HELP_BUTTON);
+        XtUnmanageChild(helpButton);
         XtManageChild(errorDialog);
     }
 }

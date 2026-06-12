@@ -54,6 +54,8 @@ class PropertiesPanelField {
                 Arg args[1];
                 XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)"Invalid format! Use only letters, numbers, and underscores."));
                 Widget errorDialog = XmCreateErrorDialog(XtParent(w), (char*)"ErrorDialog", args, 1);
+                Widget helpButton = XmMessageBoxGetChild(errorDialog, XmDIALOG_HELP_BUTTON);
+                XtUnmanageChild(helpButton);    
                 XtManageChild(errorDialog);
                 pThis->UpdateFieldValue(pThis->lastValidValue.c_str());
                 return;
