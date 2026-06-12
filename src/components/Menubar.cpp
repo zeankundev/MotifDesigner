@@ -52,10 +52,10 @@ Widget Components::RenderMenubar(Widget parent) {
 
     MenuContent fileContents[] = {
         // MENU_ITEM_VOID("New Project", nullptr),
-        MENU_ITEM_VOID("New Visual File", nullptr),
+        // MENU_ITEM_VOID("New Visual File", nullptr),
         // MENU_ITEM_VOID("Open Project", nullptr),
-        MENU_ITEM_VOID("Open Visual File", nullptr),
-        MENU_ITEM_VOID("Save Visual File", nullptr),
+        // MENU_ITEM_VOID("Open Visual File", nullptr),
+        // MENU_ITEM_VOID("Save Visual File", nullptr),
         MENU_ITEM_VOID("Exit", std::quick_exit),
     };
 
