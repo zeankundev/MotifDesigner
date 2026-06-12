@@ -1,6 +1,7 @@
 #include "Components.h"
 #include "Logger.h"
 #include "Misc.h"
+#include "TextDialog.h"
 #include <X11/Intrinsic.h>
 #include <Xm/PushB.h>
 #include <Xm/RowColumn.h>
@@ -31,6 +32,15 @@ struct MenubarItem {
     int contentsCount;
 };
 
+void AfterDialogCBTest() {
+    Logger::log("Received callback");
+}
+void SpawnDialogTest(Widget w, XtPointer clientData, XtPointer callData) {
+    Widget parent = (Widget)clientData;
+    TextDialog dialog;
+    dialog.SpawnDialogInstance(parent, "Enter a class name.\nThis is required so we can generate proper header files", AfterDialogCBTest);
+}
+
 Widget Components::RenderMenubar(Widget parent) {
     Arg args[20];
     int n = 0;
@@ -49,7 +59,7 @@ Widget Components::RenderMenubar(Widget parent) {
     MenuContent workflowContents[] = {
         // MENU_ITEM_VOID("Open C++ Editor", nullptr),
         // MENU_ITEM_VOID("Regenerate Visual .h file", nullptr),
-        MENU_ITEM_VOID("Save Individual .h file", nullptr),
+        MENU_ITEM_VOID("Save Individual .h file", SpawnDialogTest),
         // MENU_ITEM_VOID("Build and Run", nullptr),
         // MENU_ITEM_VOID("Build Only", nullptr),
         // MENU_ITEM_VOID("Package to AppImage", nullptr),
@@ -86,9 +96,9 @@ Widget Components::RenderMenubar(Widget parent) {
             XtManageChild(menuItem);
 
             if (menuItems[i].contents[j].takesWidget && menuItems[i].contents[j].callback.w != nullptr) {
-                XtAddCallback(menuItem, XmNactivateCallback, (XtCallbackProc)menuItems[i].contents[j].callback.w, nullptr);
+                XtAddCallback(menuItem, XmNactivateCallback, (XtCallbackProc)menuItems[i].contents[j].callback.w, (XtPointer)parent);
             } else if (!menuItems[i].contents[j].takesWidget && menuItems[i].contents[j].callback.v != nullptr) {
-                XtAddCallback(menuItem, XmNactivateCallback, (XtCallbackProc)menuItems[i].contents[j].callback.v, nullptr);
+                XtAddCallback(menuItem, XmNactivateCallback, (XtCallbackProc)menuItems[i].contents[j].callback.v, (XtPointer)parent);
             }
         }
 

@@ -37,6 +37,7 @@ set(SOURCES
   src/components/PropertiesPanel.cpp
   src/components/Canvas.cpp
   src/components/StatusBar.cpp
+  src/external/TextDialog.cpp
 )
 
 add_executable(MotifDesigner ${SOURCES})
