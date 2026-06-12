@@ -97,7 +97,7 @@ void ProjectManager::SaveIndividualHeaderFile(Widget parent, std::string pathToS
     headerFile.close();
     Logger::log("[SUCCESS] saving header file");
     Arg args[1];
-    XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)"Header file saved successfully!"));
+    XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)(std::string("Header file saved successfully to ") + pathToSave + "/" + className + ".h").c_str()));
     Widget successDialog = XmCreateInformationDialog(parent, (char*)"InformationDialog", args, 1);
     Widget helpButton = XmMessageBoxGetChild(successDialog, XmDIALOG_HELP_BUTTON);
     XtUnmanageChild(helpButton);

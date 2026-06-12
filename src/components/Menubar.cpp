@@ -37,7 +37,8 @@ TextDialog dialog;
 void AfterDialogCBTest(Widget w, XtPointer clientData, XtPointer callData) {
     Logger::log("Received callback");
     std::string value = dialog.GetCurrentDialogValue();
-    ProjectManager::SaveIndividualHeaderFile(w, "/home/zean", value);
+    // Do not store to my personal drive: store it at the user's /home directory by default!
+    ProjectManager::SaveIndividualHeaderFile(w, (char*)getenv("HOME"), value);
 }
 void SpawnDialogTest(Widget w, XtPointer clientData, XtPointer callData) {
     Widget parent = (Widget)clientData;
