@@ -41,8 +41,10 @@ jobs:
           ./shortcuts.sh appimage
 
       - name: Upload Finished Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: MotifDesigner-${{ matrix.variant }}
           path: MotifDesigner-${{ matrix.variant }}-x86_64.AppImage
+          archive: false
+          compression-level: 0
 # sudo mkdir -p /usr/include/X11/extensions && sudo cp include/Print.h /usr/include/X11/extensions/
