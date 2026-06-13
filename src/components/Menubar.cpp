@@ -52,7 +52,9 @@ Widget Components::RenderMenubar(Widget parent) {
     Logger::log("Initializing menubar");
 
     MenuContent fileContents[] = {
+        // todo 1.2: implement project structuring for projects
         // MENU_ITEM_VOID("New Project", nullptr),
+        // todo 1.0: add basic visual file editing, saving, etc.
         // MENU_ITEM_VOID("New Visual File", nullptr),
         // MENU_ITEM_VOID("Open Project", nullptr),
         // MENU_ITEM_VOID("Open Visual File", nullptr),
@@ -61,6 +63,7 @@ Widget Components::RenderMenubar(Widget parent) {
     };
 
     MenuContent workflowContents[] = {
+        // todo 1.2: implement IDE-like options and user code testing
         // MENU_ITEM_VOID("Open C++ Editor", nullptr),
         // MENU_ITEM_VOID("Regenerate Visual .h file", nullptr),
         MENU_ITEM_VOID("Save Individual .h file", SpawnDialogTest),

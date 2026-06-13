@@ -48,6 +48,7 @@ Widget Components::RenderPropertiesPanel(Widget parent) {
     PropertiesPanel::yPos.RenderField(propertiesForm, (char*)"yPos", (char*)"Y Position", (char*)"", UnisonOnChange);
     PropertiesPanel::width.RenderField(propertiesForm, (char*)"width", (char*)"Width", (char*)"", UnisonOnChange);
     PropertiesPanel::height.RenderField(propertiesForm, (char*)"height", (char*)"Height", (char*)"", UnisonOnChange);
+    // todo 0.8: add snap to grid checkmark option here
     return propertiesPanel;
 }
 std::string PropertiesPanel::GetWidgetValue(PropertiesPanelField field) {
