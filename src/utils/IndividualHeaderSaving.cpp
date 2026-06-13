@@ -7,11 +7,18 @@
 #include <Xm/XmStrDefs.h>
 #include <algorithm>
 #include <cctype>
+#include <cstddef>
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include <string>
 #include <sstream>
+
+static Widget GetShellParent(Widget w) {
+    while (w != NULL && !XtIsShell(w))
+        w = XtParent(w);
+    return w;
+}
 
 void ProjectManager::SaveIndividualHeaderFile(Widget parent, std::string pathToSave, std::string className) {
     std::vector<CanvasInterface::EditorWidgetInstance> widgets = g_canvas->GetWidgetList();
@@ -85,9 +92,10 @@ void ProjectManager::SaveIndividualHeaderFile(Widget parent, std::string pathToS
     // Save in pathToSave/className.h
     std::ofstream headerFile(pathToSave + "/" + className + ".hpp", std::ios::out | std::ios::binary);
     if (!headerFile.is_open()) {
+        Widget shellParent = GetShellParent(parent);
         Arg args[1];
         XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)"Failed to save header file!"));
-        Widget errorDialog = XmCreateErrorDialog(parent, (char*)"ErrorDialog", args, 1);
+        Widget errorDialog = XmCreateErrorDialog(shellParent, (char*)"ErrorDialog", args, 1);
         Widget helpButton = XmMessageBoxGetChild(errorDialog, XmDIALOG_HELP_BUTTON);
         XtUnmanageChild(helpButton);
         XtManageChild(errorDialog);
@@ -97,11 +105,19 @@ void ProjectManager::SaveIndividualHeaderFile(Widget parent, std::string pathToS
     headerFile << ss.str();
     headerFile.close();
     Logger::log("[SUCCESS] saving header file");
-    Arg args[1];
-    XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)(std::string("Header file saved successfully to ") + pathToSave + "/" + className + ".hpp").c_str()));
+    if (parent != NULL) {  
+        Widget shellParent = GetShellParent(parent);
+        Logger::log(shellParent ? "OK, shell parent found, showing dialog" : "WARNING: no shell parent found"); 
+        if (shellParent == NULL) shellParent = parent; // fallback
+        Arg args[1];
+        XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)(std::string("Header file saved successfully to ") + pathToSave + "/" + className + ".hpp").c_str()));
+        Widget successDialog = XmCreateInformationDialog(shellParent, (char*)"InformationDialog", args, 1);
+        Widget helpButton = XmMessageBoxGetChild(successDialog, XmDIALOG_HELP_BUTTON);
+        XtUnmanageChild(helpButton);
+        XtManageChild(successDialog);
+    } else {
+        Logger::log("OK, parent is null, NOT showing dialog");
+        return;
+    }    
     StatusBar::UpdateStatusBar((std::string("Header file saved in: ") + pathToSave + "/" + className + ".hpp").c_str());
-    Widget successDialog = XmCreateInformationDialog(parent, (char*)"InformationDialog", args, 1);
-    Widget helpButton = XmMessageBoxGetChild(successDialog, XmDIALOG_HELP_BUTTON);
-    XtUnmanageChild(helpButton);
-    XtManageChild(successDialog);
 }
