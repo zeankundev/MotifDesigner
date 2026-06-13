@@ -62,19 +62,19 @@ void ProjectManager::SaveIndividualHeaderFile(Widget parent, std::string pathToS
     ss  << "            XtSetArg(args[n], XmNheight, " << widget.height << "); n++;\n";
     switch (widget.type) {
         case CanvasInterface::ToolTypes::Button:
-            ss  << "            XtSetArg(args[n], XmNlabelString, XmStringCreateLocalized((char*)\"" << widget.height << "\"));\n";
+            ss  << "            XtSetArg(args[n], XmNlabelString, XmStringCreateLocalized((char*)\"" << widget.value << "\"));\n";
             ss  << "            " << widget.name << " = XmCreatePushButton(FormParent, (char*)\"" << widget.name << "\", args, n);\n";
             break;
         case CanvasInterface::ToolTypes::Label:
-            ss  << "            XtSetArg(args[n], XmNlabelString, XmStringCreateLocalized((char*)\"" << widget.height << "\"));\n";
+            ss  << "            XtSetArg(args[n], XmNlabelString, XmStringCreateLocalized((char*)\"" << widget.value << "\"));\n";
             ss  << "            " << widget.name << " = XmCreateLabel(FormParent, (char*)\"" << widget.name << "\", args, n);\n";
             break;
         case CanvasInterface::ToolTypes::TextField:
-            ss  << "            XtSetArg(args[n], XmNvalue, (char*)\"" << widget.height << "\");\n";
+            ss  << "            XtSetArg(args[n], XmNvalue, (char*)\"" << widget.value << "\");\n";
             ss  << "            " << widget.name << " = XmCreateTextField(FormParent, (char*)\"" << widget.name << "\", args, n);\n";
             break;
         case CanvasInterface::ToolTypes::Toggle:
-            ss  << "            XtSetArg(args[n], XmNlabelString, XmStringCreateLocalized((char*)\"" << widget.height << "\"));\n";
+            ss  << "            XtSetArg(args[n], XmNlabelString, XmStringCreateLocalized((char*)\"" << widget.value << "\"));\n";
             ss  << "            " << widget.name << " = XmCreateToggleButton(FormParent, (char*)\"" << widget.name << "\", args, n);\n";
             break;
         case CanvasInterface::ToolTypes::Frame:
