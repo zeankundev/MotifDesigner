@@ -38,8 +38,8 @@ void ProjectManager::SaveIndividualHeaderFile(Widget parent, std::string pathToS
     std::string guard = className;
     std::transform(guard.begin(), guard.end(), guard.begin(), ::toupper);
 
-    ss  << "#ifndef " << guard << "\n"
-        << "#define " << guard << "\n\n";
+    ss  << "#ifndef " << guard << "_H\n"
+        << "#define " << guard << "_H\n\n";
     
     ss << "class " << className << " {\n"
         << "    public:\n";
