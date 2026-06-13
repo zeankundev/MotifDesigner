@@ -79,7 +79,7 @@ void CanvasInterface::InitializeGraphicContexts(Widget canvas) {
     values.foreground = color.pixel;
     backgroundContext = XCreateGC(display, win, GCForeground, &values);
 
-    XAllocNamedColor(display, cmap, "#e0e0e0", &color, &exact);
+    XAllocNamedColor(display, cmap, "#666666", &color, &exact);
     values.foreground = color.pixel;
     gridContext = XCreateGC(display, win, GCForeground, &values);
 
@@ -122,10 +122,10 @@ void CanvasInterface::DrawBevel(Display* display, Window win, int x, int y, int 
     GC topContext = sunken ? shadowDarkContext : shadowLightContext;
     GC bottomContext = sunken ? shadowLightContext : shadowDarkContext;
 
-    XDrawLine(display, win, topContext, x, y, x+width-1, y);
-    XDrawLine(display, win, topContext, x, y, x, y+height-1);
-    XDrawLine(display, win, bottomContext, x+width-1, y+height-1, x+width-1, y);
-    XDrawLine(display, win, bottomContext, x+width-1, y+height-1, x, y+height-1);
+    XDrawLine(display, win, topContext, x, y, x+width, y);
+    XDrawLine(display, win, topContext, x, y, x, y+height);
+    XDrawLine(display, win, bottomContext, x+width, y+height, x+width, y);
+    XDrawLine(display, win, bottomContext, x+width, y+height, x, y+height);
 }
 
 static void FixedRedrawCb(XtPointer clientData, XtIntervalId* id) {
@@ -200,11 +200,15 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
             break;
     }
     if (widget.selected) {
-        XDrawRectangle(display, win, selectBorderGraphicsContext, widget.x - 2, widget.y - 2, widget.width + 4, widget.height + 4);
-        XFillRectangle(display, win, textContext, widget.x + widget.width - 2, widget.y + widget.height - 2, resizeHandleSize, resizeHandleSize);
-        XFillRectangle(display, win, textContext, widget.x + widget.width - 2, widget.y - 6, resizeHandleSize, resizeHandleSize);
-        XFillRectangle(display, win, textContext, widget.x - 6, widget.y + widget.height - 2, resizeHandleSize, resizeHandleSize);
-        XFillRectangle(display, win, textContext, widget.x - 6, widget.y - 6, resizeHandleSize, resizeHandleSize);
+        XDrawRectangle(display, win, selectBorderGraphicsContext, widget.x, widget.y, widget.width, widget.height);
+        // Bottom right
+        XFillRectangle(display, win, textContext, widget.x + widget.width - 4, widget.y + widget.height - 4, resizeHandleSize, resizeHandleSize);
+        // Top right
+        XFillRectangle(display, win, textContext, widget.x + widget.width - 4, widget.y - 4, resizeHandleSize, resizeHandleSize);
+        // Bottom left
+        XFillRectangle(display, win, textContext, widget.x - 4, widget.y + widget.height - 4, resizeHandleSize, resizeHandleSize);
+        // Top left
+        XFillRectangle(display, win, textContext, widget.x - 4, widget.y - 4, resizeHandleSize, resizeHandleSize);
     }
 }
 
@@ -314,10 +318,10 @@ void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY) {
             if (w.selected) {
                 
                 // Define the X and Y coordinates for the edges
-                int leftX   = w.x - 2;
-                int rightX  = w.x + w.width - 2;
-                int topY    = w.y - 2;
-                int bottomY = w.y + w.height - 2;
+                int leftX   = w.x - 4;
+                int rightX  = w.x + w.width - 4;
+                int topY    = w.y - 4;
+                int bottomY = w.y + w.height - 4;
 
                 ResizeHandle hitHandle = ResizeHandle::Nothing;
 
