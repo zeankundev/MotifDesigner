@@ -56,10 +56,10 @@ void ProjectManager::SaveIndividualHeaderFile(Widget parent, std::string pathToS
     
     for (auto& widget : widgets) {
     ss  << "            n = 0;\n";
-    ss  << "            XtSetArg(args[n], XmNx, " << widget.x << ");\n";
-    ss  << "            XtSetArg(args[n], XmNy, " << widget.y << ");\n";
-    ss  << "            XtSetArg(args[n], XmNwidth, " << widget.width << ");\n";
-    ss  << "            XtSetArg(args[n], XmNheight, " << widget.height << ");\n";
+    ss  << "            XtSetArg(args[n], XmNx, " << widget.x << "); n++;\n";
+    ss  << "            XtSetArg(args[n], XmNy, " << widget.y << "); n++;\n";
+    ss  << "            XtSetArg(args[n], XmNwidth, " << widget.width << "); n++;\n";
+    ss  << "            XtSetArg(args[n], XmNheight, " << widget.height << "); n++;\n";
     switch (widget.type) {
         case CanvasInterface::ToolTypes::Button:
             ss  << "            XtSetArg(args[n], XmNlabelString, XmStringCreateLocalized((char*)\"" << widget.height << "\"));\n";
