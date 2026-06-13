@@ -129,6 +129,8 @@ Widget TextDialog::SpawnDialogInstance(Widget parent, std::string message, TextD
 
         textFieldWidget = XmCreateTextField(textDialog, (char*)"TextField", args, n);
         XtManageChild(textFieldWidget);
+        // Set initial keyboard focus to the text field
+        XtSetKeyboardFocus(textDialog, textFieldWidget);
     } else {
         XtSetArg(args[n], XmNtopAttachment, XmATTACH_FORM); n++;
         XtSetArg(args[n], XmNtopOffset, 5); n++;
@@ -139,12 +141,16 @@ Widget TextDialog::SpawnDialogInstance(Widget parent, std::string message, TextD
 
         textFieldWidget = XmCreateTextField(textDialog, (char*)"TextField", args, n);
         XtManageChild(textFieldWidget);
+        // Set initial keyboard focus to the text field
+        XtSetKeyboardFocus(textDialog, textFieldWidget);
     }
 
     if (callback != nullptr) {
         // Pass both the dialog widget and the user callback via a context struct.
         // OnSubmitCallback will free this allocation.
         DialogContext* ctx = new DialogContext{textDialog, callback};
+        // Trigger validation when Enter is pressed in the text field
+        XtAddCallback(textFieldWidget, XmNactivateCallback, ValidateTextValue, (XtPointer)ctx);
 
         // Create and attach an "OK" PushButton
         n = 0;
@@ -168,7 +174,7 @@ Widget TextDialog::SpawnDialogInstance(Widget parent, std::string message, TextD
         // Make the OK button the default — pressing Enter anywhere in the dialog routes
         // through this button, so we do NOT also register XmNactivateCallback on the
         // text field directly. Both firing on the same ctx would delete it twice (use-after-free).
-        XtSetArg(args[0], XmNdefaultButton, okButton);
+        XtSetArg(args[0], XmNdefaultButton, textFieldWidget);
         XtSetValues(textDialog, args, 1);
     }
 
