@@ -1,4 +1,5 @@
 #include "CanvasInterface.h"
+#include "Components.h"
 #include "Logger.h"
 #include "ProjectManager.h"
 #include <Xm/MessageB.h>
@@ -82,7 +83,7 @@ void ProjectManager::SaveIndividualHeaderFile(Widget parent, std::string pathToS
     ss  << "};\n";
     ss  << "#endif\n";
     // Save in pathToSave/className.h
-    std::ofstream headerFile(pathToSave + "/" + className + ".h", std::ios::out | std::ios::binary);
+    std::ofstream headerFile(pathToSave + "/" + className + ".hpp", std::ios::out | std::ios::binary);
     if (!headerFile.is_open()) {
         Arg args[1];
         XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)"Failed to save header file!"));
@@ -97,7 +98,8 @@ void ProjectManager::SaveIndividualHeaderFile(Widget parent, std::string pathToS
     headerFile.close();
     Logger::log("[SUCCESS] saving header file");
     Arg args[1];
-    XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)(std::string("Header file saved successfully to ") + pathToSave + "/" + className + ".h").c_str()));
+    XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)(std::string("Header file saved successfully to ") + pathToSave + "/" + className + ".hpp").c_str()));
+    StatusBar::UpdateStatusBar((std::string("Header file saved in: ") + pathToSave + "/" + className + ".hpp").c_str());
     Widget successDialog = XmCreateInformationDialog(parent, (char*)"InformationDialog", args, 1);
     Widget helpButton = XmMessageBoxGetChild(successDialog, XmDIALOG_HELP_BUTTON);
     XtUnmanageChild(helpButton);
