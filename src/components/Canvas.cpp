@@ -49,6 +49,7 @@ GC widgetBackgroundContext;
 GC shadowDarkContext;
 GC shadowLightContext;
 GC textContext;
+GC labelContext;
 GC selectBorderGraphicsContext;
 bool graphicsContextsInitialized = false;
 bool isDeletingWidget = false;
@@ -83,7 +84,7 @@ void CanvasInterface::InitializeGraphicContexts(Widget canvas) {
     values.foreground = color.pixel;
     gridContext = XCreateGC(display, win, GCForeground, &values);
 
-    XAllocNamedColor(display, cmap, "#808080", &color, &exact);
+    XAllocNamedColor(display, cmap, "#a4a4a4", &color, &exact);
     values.foreground = color.pixel;
     widgetBackgroundContext = XCreateGC(display, win, GCForeground, &values);
 
@@ -98,6 +99,12 @@ void CanvasInterface::InitializeGraphicContexts(Widget canvas) {
     XAllocNamedColor(display, cmap, "#000000", &color, &exact);
     values.foreground = color.pixel;
     textContext = XCreateGC(display, win, GCForeground, &values);
+
+    XAllocNamedColor(display, cmap, "#000000", &color, &exact);
+    values.foreground = color.pixel;
+    // Background should be the same as backgroundContext which is #d3d3d3. Just use hex
+    values.background = 0xd3d3d3;
+    labelContext = XCreateGC(display, win, GCForeground | GCBackground, &values);
 
     XAllocNamedColor(display, cmap, "#008080", &color, &exact);
     values.foreground = color.pixel;
@@ -152,10 +159,10 @@ void CanvasInterface::ScheduleRedraw() {
 
 void CanvasInterface::DrawWidgetElement(Display* display, Window win, const EditorWidgetInstance& widget) {
     if (!display || !win || !widgetBackgroundContext || !textContext) return;
-    XFillRectangle(display, win, widgetBackgroundContext, widget.x, widget.y, widget.width, widget.height);
 
     switch (widget.type) {
         case ToolTypes::Button: {
+            XFillRectangle(display, win, widgetBackgroundContext, widget.x, widget.y, widget.width, widget.height);
             CanvasInterface::DrawBevel(display, win, widget.x, widget.y, widget.width, widget.height, false);
             int textY = widget.y + (widget.height / 2) + 4;
             int textX = widget.x + (widget.width - (widget.value.length() * 6)) / 2;
@@ -164,12 +171,14 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
             break;
         }
         case ToolTypes::Label: {
+            XFillRectangle(display, win, backgroundContext, widget.x, widget.y, widget.width, widget.height);
             int textY = widget.y + (widget.height / 2) + 4;
             int textX = widget.x + 4;
-            XDrawString(display, win, textContext, textX, textY, widget.value.c_str(), widget.value.length());
+            XDrawString(display, win, labelContext, textX, textY, widget.value.c_str(), widget.value.length());
             break;
         }
         case ToolTypes::TextField: {
+            XFillRectangle(display, win, widgetBackgroundContext, widget.x, widget.y, widget.width, widget.height);
             CanvasInterface::DrawBevel(display, win, widget.x, widget.y, widget.width, widget.height, true);
             int textY = widget.y + (widget.height / 2) + 4;
             XDrawString(display, win, textContext, widget.x + 6, textY, widget.value.c_str(), widget.value.length());
@@ -180,6 +189,7 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
             break;
         }
         case ToolTypes::Toggle: {
+            XFillRectangle(display, win, widgetBackgroundContext, widget.x, widget.y, widget.width, widget.height);
             int boxSize = 12;
             int boxY = widget.y + (widget.height - boxSize) / 2;
             CanvasInterface::DrawBevel(display, win, widget.x + 4, boxY, boxSize, boxSize, true);
@@ -192,6 +202,7 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
             break;
         }
         case ToolTypes::Frame: {
+            XFillRectangle(display, win, widgetBackgroundContext, widget.x, widget.y, widget.width, widget.height);
             CanvasInterface::DrawBevel(display, win, widget.x, widget.y, widget.width, widget.height, true);
             XDrawString(display, win, textContext, widget.x + 8, widget.y + 14, widget.value.c_str(), widget.value.length());
             break;
