@@ -3,6 +3,8 @@ name: Build AppImages
 on:
   push:
     branches: ["main"]
+    tags:
+      - "[0-9]*"
   pull_request:
     branches: ["main"]
 
@@ -41,10 +43,30 @@ jobs:
           ./shortcuts.sh appimage
 
       - name: Upload Finished Artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: MotifDesigner-${{ matrix.variant }}
           path: MotifDesigner-${{ matrix.variant }}-x86_64.AppImage
-          archive: false
+          if-no-files-found: error
           compression-level: 0
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create Release Draft and Upload AppImages
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: "MotifDesigner ${{ github.ref_name }}"
+          files: artifacts/**/*.AppImage
 # sudo mkdir -p /usr/include/X11/extensions && sudo cp include/Print.h /usr/include/X11/extensions/
