@@ -2,6 +2,8 @@
 
 An X11 Motif visual IDE for your retro desktop. Inspired by Visual Basic. UI builder, code editor, all right in the app. Works best if you have Motif and you're on MaXX. **This is still under heavy WIP, so expect missing buttons (intentionally commented out until ready for production) in order to comply with shipping standards!**
 
+**Precaution: this app is Linux only. We do not provide options for other platforms. Your best bet, if running on other platforms, is to use a Linux desktop virtual machine, or use WSL2** (if you are on Windows, I am not sure)
+
 ## Building
 To build, you would require:
 - `cmake`
