@@ -189,7 +189,7 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
             break;
         }
         case ToolTypes::Toggle: {
-            XFillRectangle(display, win, widgetBackgroundContext, widget.x, widget.y, widget.width, widget.height);
+            XFillRectangle(display, win, backgroundContext, widget.x, widget.y, widget.width, widget.height);
             int boxSize = 12;
             int boxY = widget.y + (widget.height - boxSize) / 2;
             CanvasInterface::DrawBevel(display, win, widget.x + 4, boxY, boxSize, boxSize, true);
@@ -409,7 +409,7 @@ void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY) {
             case ToolTypes::Label:
                 defaultName = "Label";
                 defaultValue = "Some text";
-                defaultHeight = 24;
+                defaultHeight = 20;
                 break;
             case ToolTypes::TextField:
                 defaultName = "TextField";
@@ -419,7 +419,7 @@ void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY) {
             case ToolTypes::Toggle:
                 defaultName = "ToggleButton";
                 defaultValue = "Toggle";
-                defaultHeight = 24;
+                defaultHeight = 20;
                 break;
             case ToolTypes::Frame:
                 defaultName = "Frame";
