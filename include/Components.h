@@ -151,6 +151,11 @@ class PropertiesPanelField {
 
             return result;
         }
+
+        Widget GetWidget() {
+            return field;
+        }
+
         bool ValidateStrictFormat(const char* value) {
             static const std::regex nameRegex("^[A-Za-z0-9_]+$");
             if (value == NULL) return false;

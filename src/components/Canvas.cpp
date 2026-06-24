@@ -320,6 +320,14 @@ void CanvasInterface::SetTool(ToolTypes tool) {
     }
 }
 
+void CanvasInterface::SetSnapToGrid(bool enable) {
+    snapToGrid = enable;
+}
+
+bool CanvasInterface::GetSnapToGridStatus() {
+    return snapToGrid;
+}
+
 void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY) {
     if (g_canvas == nullptr) return;
     if (activeTool == ToolTypes::Select) {

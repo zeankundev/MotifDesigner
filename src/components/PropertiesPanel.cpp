@@ -6,12 +6,14 @@
 #include <Xm/Frame.h>
 #include <Xm/Label.h>
 #include <Xm/Text.h>
+#include <Xm/ToggleB.h>
 #include <Xm/Xm.h>
 #include <Xm/XmStrDefs.h>
 #include <Xm/TextF.h>
 #include <Xm/XmAll.h>
 #include <cstddef>
 #include <regex>
+#include <string>
 
 // Static member definitions
 PropertiesPanelField PropertiesPanel::instanceName;
@@ -23,6 +25,13 @@ PropertiesPanelField PropertiesPanel::height;
 
 void UnisonOnChange(Widget widget, XtPointer clientData, XtPointer callData) {
     g_canvas->ApplyPropertyPanelChanges();
+}
+
+void ToggleSnapToGridCheckbox(Widget w, XtPointer clientData, XtPointer callData) {
+    XmToggleButtonCallbackStruct *cbData = (XmToggleButtonCallbackStruct *)callData;
+    bool newState = (cbData->set == XmSET);
+    g_canvas->SetSnapToGrid(newState);
+    Logger::log((std::string("Snap to Grid " + std::string(newState ? "enabled" : "disabled")).c_str()));
 }
 
 Widget Components::RenderPropertiesPanel(Widget parent) {
@@ -49,6 +58,18 @@ Widget Components::RenderPropertiesPanel(Widget parent) {
     PropertiesPanel::width.RenderField(propertiesForm, (char*)"width", (char*)"Width", (char*)"", UnisonOnChange);
     PropertiesPanel::height.RenderField(propertiesForm, (char*)"height", (char*)"Height", (char*)"", UnisonOnChange);
     // todo 0.8: add snap to grid checkmark option here
+    n = 0;
+    XtSetArg(args[n], XmNtopAttachment, XmATTACH_WIDGET); n++;
+    XtSetArg(args[n], XmNtopWidget, PropertiesPanel::height.GetWidget()); n++;
+    XtSetArg(args[n], XmNleftAttachment, XmATTACH_FORM); n++;
+    XtSetArg(args[n], XmNrightAttachment, XmATTACH_FORM); n++;
+    XtSetArg(args[n], XmNmarginHeight, 6); n++;
+    XtSetArg(args[n], XmNlabelString, XmStringCreateLocalized((char*)"Snap to Grid")); n++;
+    XtSetArg(args[n], XmNset, g_canvas->GetSnapToGridStatus() ? XmSET : XmUNSET); n++;
+    Widget snapToGridCheckbox = XmCreateToggleButton(propertiesForm, (char*)"SnapToGridCheckbox", args, n);
+    XtManageChild(snapToGridCheckbox);
+    XtAddCallback(snapToGridCheckbox, XmNvalueChangedCallback, ToggleSnapToGridCheckbox, NULL);
+
     return propertiesPanel;
 }
 std::string PropertiesPanel::GetWidgetValue(PropertiesPanelField field) {

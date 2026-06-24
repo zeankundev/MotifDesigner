@@ -54,6 +54,8 @@ public:
     void DeleteSelectedWidget();
     std::vector<EditorWidgetInstance> GetWidgetList();
     static void ChangeActiveTool(ToolTypes tool);
+    void SetSnapToGrid(bool enable);
+    bool GetSnapToGridStatus();
 };
 
 // Global canvas instance accessible throughout the app
