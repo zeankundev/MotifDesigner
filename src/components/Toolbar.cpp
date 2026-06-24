@@ -4,6 +4,7 @@
 #include "../xpm/PushButtonIcon.xpm"
 #include "../xpm/LabelIcon.xpm"
 #include "../xpm/TextFieldIcon.xpm"
+#include "../xpm/CheckmarkIcon.xpm"
 #include "PixmapManager.h"
 #include <X11/Composite.h>
 #include <X11/ICE/ICElib.h>
@@ -90,6 +91,10 @@ void TextFieldButtonCallback(Widget widget, XtPointer clientData, XtPointer call
     g_canvas->SetTool(CanvasInterface::ToolTypes::TextField);
 }
 
+void CheckmarkButtonCallback(Widget widget, XtPointer clientData, XtPointer callData) {
+    g_canvas->SetTool(CanvasInterface::ToolTypes::Toggle);
+}
+
 Widget Components::RenderToolbar(Widget parent) {
     Arg args[10];
     int n = 0;
@@ -114,6 +119,7 @@ Widget Components::RenderToolbar(Widget parent) {
     ToolbarButtons::CreateToolbarButton(toolbarForm, PushButtonIcon, (char*)"PushButton", PushButtonCallback, "Add Push Button");
     ToolbarButtons::CreateToolbarButton(toolbarForm, LabelIcon, (char*)"LabelButton", LabelButtonCallback, "Add Label");
     ToolbarButtons::CreateToolbarButton(toolbarForm, TextFieldIcon, (char*)"TextFieldButton", TextFieldButtonCallback, "Add Text Field");
+    ToolbarButtons::CreateToolbarButton(toolbarForm, CheckmarkIcon, (char*)"ToggleButton", CheckmarkButtonCallback, "Add Toggle");
     // todo 0.8: implement more options (toggle, frame) as tool choices
 
     return mainToolbar;
