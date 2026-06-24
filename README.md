@@ -1,3 +1,8 @@
+<img width="1945" height="337" alt="image" src="https://github.com/user-attachments/assets/b7044df8-3067-485a-9be1-06b5d756903b" />
+<img width="1038" height="638" alt="image" src="https://github.com/user-attachments/assets/a92447ee-7c6c-42db-aee2-6bfda2abe840" />
+<div align=center><p>A screenshot of MotifDesigner in MaXX Desktop</p></div>
+
+
 # MotifDesigner
 
 An X11 Motif visual IDE for your retro desktop. Inspired by Visual Basic. UI builder, code editor, all right in the app. Works best if you have Motif and you're on MaXX. **This is still under heavy WIP, so expect missing buttons (intentionally commented out until ready for production) in order to comply with shipping standards!**
