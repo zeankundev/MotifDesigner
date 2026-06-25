@@ -51,6 +51,10 @@ GC shadowLightContext;
 GC textContext;
 GC labelContext;
 GC selectBorderGraphicsContext;
+
+GC handleOuterContext;
+GC handleInnerContext;
+
 bool graphicsContextsInitialized = false;
 bool isDeletingWidget = false;
 bool requiresRedraw = false;
@@ -106,10 +110,17 @@ void CanvasInterface::InitializeGraphicContexts(Widget canvas) {
     values.background = 0xd3d3d3;
     labelContext = XCreateGC(display, win, GCForeground | GCBackground, &values);
 
-    XAllocNamedColor(display, cmap, "#008080", &color, &exact);
+    XAllocNamedColor(display, cmap, "#00A0FF", &color, &exact);
     values.foreground = color.pixel;
-    values.line_style = LineOnOffDash;
-    selectBorderGraphicsContext = XCreateGC(display, win, GCForeground | GCLineStyle, &values);
+    selectBorderGraphicsContext = XCreateGC(display, win, GCForeground, &values);
+
+    XAllocNamedColor(display, cmap, "#00A0FF", &color, &exact);
+    values.foreground = color.pixel;
+    handleOuterContext = XCreateGC(display, win, GCForeground, &values);
+
+    XAllocNamedColor(display, cmap, "#FFFFFF", &color, &exact);
+    values.foreground = color.pixel;
+    handleInnerContext = XCreateGC(display, win, GCForeground, &values);
 
     graphicsContextsInitialized = true;
 }
@@ -213,13 +224,53 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
     if (widget.selected) {
         XDrawRectangle(display, win, selectBorderGraphicsContext, widget.x, widget.y, widget.width, widget.height);
         // Bottom right
-        XFillRectangle(display, win, textContext, widget.x + widget.width - 4, widget.y + widget.height - 4, resizeHandleSize, resizeHandleSize);
+        XFillRectangle(display, win, handleOuterContext, widget.x + widget.width - 4, widget.y + widget.height - 4, resizeHandleSize, resizeHandleSize);
+        XFillRectangle(display, win, handleInnerContext, widget.x + widget.width - 3, widget.y + widget.height - 3, resizeHandleSize - 2, resizeHandleSize - 2);
         // Top right
-        XFillRectangle(display, win, textContext, widget.x + widget.width - 4, widget.y - 4, resizeHandleSize, resizeHandleSize);
+        XFillRectangle(display, win, handleOuterContext, widget.x + widget.width - 4, widget.y - 4, resizeHandleSize, resizeHandleSize);
+        XFillRectangle(display, win, handleInnerContext, widget.x + widget.width - 3, widget.y - 3, resizeHandleSize - 2, resizeHandleSize - 2);
         // Bottom left
-        XFillRectangle(display, win, textContext, widget.x - 4, widget.y + widget.height - 4, resizeHandleSize, resizeHandleSize);
+        XFillRectangle(display, win, handleOuterContext, widget.x - 4, widget.y + widget.height - 4, resizeHandleSize, resizeHandleSize);
+        XFillRectangle(display, win, handleInnerContext, widget.x - 3, widget.y + widget.height - 3, resizeHandleSize - 2, resizeHandleSize - 2);
         // Top left
-        XFillRectangle(display, win, textContext, widget.x - 4, widget.y - 4, resizeHandleSize, resizeHandleSize);
+        XFillRectangle(display, win, handleOuterContext, widget.x - 4, widget.y - 4, resizeHandleSize, resizeHandleSize);
+        XFillRectangle(display, win, handleInnerContext, widget.x - 3, widget.y - 3, resizeHandleSize - 2, resizeHandleSize - 2);
+
+        // Size label badge: centered horizontally below the widget
+        {
+            std::string sizeLabel = std::to_string(widget.width) + "x" + std::to_string(widget.height);
+            int charWidth  = 6;  // Approximate fixed-font glyph width
+            int charHeight = 10; // Approximate fixed-font glyph height
+            int textW = (int)sizeLabel.length() * charWidth;
+            int padX  = 8;
+            int padY  = 4;
+            int r     = 6;  // Corner radius
+            int badgeW = textW + padX * 2;
+            int badgeH = charHeight + padY * 2;
+            int badgeX = widget.x + (widget.width - badgeW) / 2;
+            int badgeY = widget.y + widget.height + 8;
+
+            // Fill the rounded rect using three overlapping filled areas + 4 arcs
+            // Center horizontal strip
+            XFillRectangle(display, win, handleOuterContext, badgeX + r, badgeY, badgeW - r * 2, badgeH);
+            // Left vertical strip
+            XFillRectangle(display, win, handleOuterContext, badgeX, badgeY + r, r, badgeH - r * 2);
+            // Right vertical strip
+            XFillRectangle(display, win, handleOuterContext, badgeX + badgeW - r, badgeY + r, r, badgeH - r * 2);
+            // Top-left arc
+            XFillArc(display, win, handleOuterContext, badgeX, badgeY, r * 2, r * 2, 90 * 64, 90 * 64);
+            // Top-right arc
+            XFillArc(display, win, handleOuterContext, badgeX + badgeW - r * 2, badgeY, r * 2, r * 2, 0, 90 * 64);
+            // Bottom-left arc
+            XFillArc(display, win, handleOuterContext, badgeX, badgeY + badgeH - r * 2, r * 2, r * 2, 180 * 64, 90 * 64);
+            // Bottom-right arc
+            XFillArc(display, win, handleOuterContext, badgeX + badgeW - r * 2, badgeY + badgeH - r * 2, r * 2, r * 2, 270 * 64, 90 * 64);
+
+            // Draw the label text centered in the badge
+            int textX = badgeX + padX;
+            int textY = badgeY + padY + charHeight;
+            XDrawString(display, win, handleInnerContext, textX, textY, sizeLabel.c_str(), sizeLabel.length());
+        }
     }
 }
 
