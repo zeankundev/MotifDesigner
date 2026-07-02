@@ -3,12 +3,15 @@
 #include "Misc.h"
 #include "ProjectManager.h"
 #include "TextDialog.h"
+#include <X11/Composite.h>
 #include <X11/Intrinsic.h>
+#include <Xm/FileSB.h>
 #include <Xm/PushB.h>
 #include <Xm/RowColumn.h>
 #include <Xm/CascadeB.h>
 #include <Xm/Xm.h>
 #include <Xm/XmStrDefs.h>
+#include <cstddef>
 #include <cstdlib>
 #include <string>
 
@@ -25,6 +28,12 @@ struct MenuContent {
     bool takesWidget; // true if callback.w is valid, false if callback.v is valid
 };
 
+enum FilePickerState {
+    // OpenProject,
+    OpenFile,
+    SaveFile,
+};
+
 #define MENU_ITEM_VOID(title, func) { title, { .v = (ActionCallbackVoid)func }, false }
 #define MENU_ITEM_WIDGET(title, func) { title, { .w = (ActionCallbackWidget)func }, true }
 
@@ -33,7 +42,10 @@ struct MenubarItem {
     const MenuContent* contents;
     int contentsCount;
 };
+
 TextDialog dialog;
+FilePickerState pickerState = FilePickerState::OpenFile;
+
 void AfterDialogCBTest(Widget w, XtPointer clientData, XtPointer callData) {
     Logger::log("Received callback");
     std::string value = dialog.GetCurrentDialogValue();
@@ -43,6 +55,65 @@ void AfterDialogCBTest(Widget w, XtPointer clientData, XtPointer callData) {
 void SpawnDialogTest(Widget w, XtPointer clientData, XtPointer callData) {
     Widget parent = (Widget)clientData;
     dialog.SpawnDialogInstance(parent, "Enter a class name.\nThis is required so we can generate proper header files", AfterDialogCBTest);
+}
+
+void _TEST_FileCallback_OnCancel(Widget w, XtPointer clientData, XtPointer callData) {
+    Widget fileDialog = (Widget)clientData;
+    Logger::log("Nothing is picked to be saved");
+    XtDestroyWidget(fileDialog);
+}
+
+void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer callData) {
+    Widget fileDialog = (Widget)clientData;
+    // Find the filepath that the user picked
+    XmFileSelectionBoxCallbackStruct *callback = static_cast<XmFileSelectionBoxCallbackStruct*>(callData);
+    char *filePath = nullptr;
+    XmStringGetLtoR(callback->value, XmFONTLIST_DEFAULT_TAG, &filePath);
+
+    if (filePath != nullptr) {
+        Logger::log(("User picked: " + std::string(filePath)).c_str());
+    } else {
+        Logger::log("User cancelled the dialog");
+    }
+    
+    switch (pickerState) {
+        case FilePickerState::OpenFile: {
+            Logger::log("Requested to open a visual file. (Not Implemented yet)");
+            break;
+        }
+        case FilePickerState::SaveFile: {
+            Logger::log("Requested to save a visual file. (Not Implemented yet)");
+            break;
+        }
+    }
+
+    XtDestroyWidget(fileDialog);
+}
+
+void _TEST_SaveFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
+    Widget parent = (Widget)clientData;
+    pickerState = FilePickerState::SaveFile;
+    Arg args[16];
+    int n = 0;
+
+    XtSetArg(args[n], XmNdialogTitle, XmStringCreateLocalized((char*)"Save Visual File")); n++;
+    Widget saveDialog = XmCreateFileSelectionDialog(parent, (char*)"SaveFileDialog", args, n);
+    XtAddCallback(saveDialog, XmNcancelCallback, _TEST_FileCallback_OnCancel, (XtPointer)saveDialog);
+    XtAddCallback(saveDialog, XmNokCallback, _TEST_FileCallback_OnSuccess, (XtPointer)saveDialog);
+    XtManageChild(saveDialog);
+}
+
+void _TEST_OpenFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
+    Widget parent = (Widget)clientData;
+    pickerState = FilePickerState::OpenFile;
+    Arg args[16];
+    int n = 0;
+
+    XtSetArg(args[n], XmNdialogTitle, XmStringCreateLocalized((char*)"Open Visual File")); n++;
+    Widget openDialog = XmCreateFileSelectionDialog(parent, (char*)"OpenFileDialog", args, n);
+    XtAddCallback(openDialog, XmNcancelCallback, _TEST_FileCallback_OnCancel, (XtPointer)openDialog);
+    XtAddCallback(openDialog, XmNokCallback, _TEST_FileCallback_OnSuccess, (XtPointer)openDialog);
+    XtManageChild(openDialog);
 }
 
 Widget Components::RenderMenubar(Widget parent) {
@@ -57,8 +128,8 @@ Widget Components::RenderMenubar(Widget parent) {
         // todo 1.0: add basic visual file editing, saving, etc.
         // MENU_ITEM_VOID("New Visual File", nullptr),
         // MENU_ITEM_VOID("Open Project", nullptr),
-        // MENU_ITEM_VOID("Open Visual File", nullptr),
-        // MENU_ITEM_VOID("Save Visual File", nullptr),
+        MENU_ITEM_VOID("Open Visual File", _TEST_OpenFileDialog),
+        MENU_ITEM_VOID("Save Visual File", _TEST_SaveFileDialog),
         MENU_ITEM_VOID("Exit", std::quick_exit),
     };
 
