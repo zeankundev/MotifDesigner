@@ -5,5 +5,6 @@
 class ProjectManager {
     public:
         static void SaveIndividualHeaderFile(Widget parent, std::string pathToSave, std::string className);
+        static void ExportVisualFile(char* pathToSave);
 };
 #endif

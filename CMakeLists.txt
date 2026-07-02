@@ -39,6 +39,7 @@ set(SOURCES
   src/components/StatusBar.cpp
   src/external/TextDialog.cpp
   src/utils/IndividualHeaderSaving.cpp
+  src/utils/VisualFileExporter.cpp
 )
 
 add_executable(MotifDesigner ${SOURCES})

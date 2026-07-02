@@ -159,6 +159,7 @@ void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer call
         }
         case FilePickerState::SaveFile: {
             Logger::log("Requested to save a visual file. (Not Implemented yet)");
+            ProjectManager::ExportVisualFile(filePath);
             break;
         }
     }
