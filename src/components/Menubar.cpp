@@ -9,6 +9,7 @@
 #include <Xm/PushB.h>
 #include <Xm/RowColumn.h>
 #include <Xm/CascadeB.h>
+#include <Xm/Text.h>
 #include <Xm/Xm.h>
 #include <Xm/XmStrDefs.h>
 #include <cstddef>
@@ -63,6 +64,81 @@ void _TEST_FileCallback_OnCancel(Widget w, XtPointer clientData, XtPointer callD
     XtDestroyWidget(fileDialog);
 }
 
+std::string getFilename(const std::string& path) {
+    size_t lastSlash = path.find_last_of('/');
+    if (lastSlash == std::string::npos) return path;
+    return path.substr(lastSlash + 1);
+}
+
+// Keep track of what the user is typing so directory changes don't wipe it
+static std::string g_LastTypedFilename = "NewVisualFile.vfl";
+
+// Callback that tracks the text field changes safely without modifying them
+void _TEST_FileCallback_OnTextChange(Widget w, XtPointer clientData, XtPointer callData) {
+    char *currentText = XmTextGetString(w);
+    if (!currentText) return;
+
+    std::string currentPath(currentText);
+    XtFree(currentText);
+
+    // Extract just the filename component
+    size_t lastSlash = currentPath.find_last_of('/');
+    std::string filename = (lastSlash == std::string::npos) ? currentPath : currentPath.substr(lastSlash + 1);
+
+    // Only update our cache if they actually typed something containing our extension
+    if (!filename.empty() && filename.find(".vfl") != std::string::npos) {
+        g_LastTypedFilename = filename;
+    }
+}
+
+struct DirFixContext {
+    Widget fileDialog;
+    Widget directoryList;
+};
+
+void _DeferredDirFixTimer(XtPointer clientData, XtIntervalId *id) {
+    DirFixContext *ctx = static_cast<DirFixContext*>(clientData);
+    if (!ctx) return;
+
+    // 1. Fetch the new directory path from Motif
+    Arg args[1];
+    XmString xmDir = nullptr;
+    XtSetArg(args[0], XmNdirectory, &xmDir);
+    XtGetValues(ctx->fileDialog, args, 1);
+
+    char *dirPath = nullptr;
+    XmStringGetLtoR(xmDir, XmFONTLIST_DEFAULT_TAG, &dirPath);
+    std::string newDir = dirPath ? std::string(dirPath) : "";
+    XtFree(dirPath);
+
+    // 2. Combine the directory with our cached "sticky" filename
+    Widget selectionTextField = XmFileSelectionBoxGetChild(ctx->fileDialog, (unsigned char)XmDIALOG_TEXT);
+    if (selectionTextField && !newDir.empty()) {
+        std::string finalStickyPath = newDir + g_LastTypedFilename;
+
+        // Force-update the input field with the user's custom name retained
+        XmTextSetString(selectionTextField, const_cast<char*>(finalStickyPath.c_str()));
+        XmTextSetInsertionPosition(selectionTextField, finalStickyPath.length());
+    }
+
+    delete ctx;
+}
+
+// Fired when a directory is chosen or double-clicked from the list box
+void _TEST_FileCallback_OnDirSelect(Widget w, XtPointer clientData, XtPointer callData) {
+    Widget fileDialog = (Widget)clientData;
+    
+    DirFixContext *ctx = new DirFixContext{ fileDialog, w };
+    XtAppAddTimeOut(XtWidgetToApplicationContext(fileDialog), 1, _DeferredDirFixTimer, (XtPointer)ctx);
+}
+
+// Helper to extract just the directory from a full path (including trailing slash)
+std::string getDirectory(const std::string& path) {
+    size_t lastSlash = path.find_last_of('/');
+    if (lastSlash == std::string::npos) return "./";
+    return path.substr(0, lastSlash + 1);
+}
+
 void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer callData) {
     Widget fileDialog = (Widget)clientData;
     // Find the filepath that the user picked
@@ -96,8 +172,58 @@ void _TEST_SaveFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
     Arg args[16];
     int n = 0;
 
+    // 1. Reset the sticky cache to default when the dialog opens
+    g_LastTypedFilename = "NewVisualFile.vfl";
+
     XtSetArg(args[n], XmNdialogTitle, XmStringCreateLocalized((char*)"Save Visual File")); n++;
+    
+    // 2. Create the dialog frame first so we can extract its default directory context
     Widget saveDialog = XmCreateFileSelectionDialog(parent, (char*)"SaveFileDialog", args, n);
+
+    // 3. Extract the actual current directory Motif is looking at
+    n = 0;
+    XmString xmDir = nullptr;
+    XtSetArg(args[0], XmNdirectory, &xmDir);
+    XtGetValues(saveDialog, args, 1);
+
+    char *dirPath = nullptr;
+    XmStringGetLtoR(xmDir, XmFONTLIST_DEFAULT_TAG, &dirPath);
+    std::string absoluteDir = dirPath ? std::string(dirPath) : "";
+    XtFree(dirPath);
+
+    // Fallback security if directory resolution fails
+    if (absoluteDir.empty()) {
+        const char* home = getenv("HOME");
+        absoluteDir = home ? std::string(home) + "/" : "./";
+    }
+
+    // 4. Construct the full template path (e.g., /home/zean/Projects/NewVisualFile.vfl)
+    std::string fullInitialPath = absoluteDir + g_LastTypedFilename;
+    XmString xmDefaultSpec = XmStringCreateLocalized((char*)fullInitialPath.c_str());
+    
+    // 5. Force Motif to use the full path specification as the baseline text selection
+    n = 0;
+    XtSetArg(args[n], XmNdirSpec, xmDefaultSpec); n++;
+    XtSetValues(saveDialog, args, n);
+    XmStringFree(xmDefaultSpec);
+
+    // Clean up UI layout hooks
+    Widget helpButton = XmFileSelectionBoxGetChild(saveDialog, (unsigned char)XmDIALOG_HELP_BUTTON);
+    XtUnmanageChild(helpButton);
+
+    // A. Track user keystrokes on the input field dynamically
+    Widget selectionTextField = XmFileSelectionBoxGetChild(saveDialog, (unsigned char)XmDIALOG_TEXT);
+    if (selectionTextField) {
+        XtAddCallback(selectionTextField, XmNvalueChangedCallback, _TEST_FileCallback_OnTextChange, nullptr);
+    }
+
+    // B. Catch directory jumps
+    Widget dirList = XmFileSelectionBoxGetChild(saveDialog, (unsigned char)XmDIALOG_DIR_LIST);
+    if (dirList) {
+        XtAddCallback(dirList, XmNbrowseSelectionCallback, _TEST_FileCallback_OnDirSelect, (XtPointer)saveDialog);
+        XtAddCallback(dirList, XmNdefaultActionCallback, _TEST_FileCallback_OnDirSelect, (XtPointer)saveDialog);
+    }
+
     XtAddCallback(saveDialog, XmNcancelCallback, _TEST_FileCallback_OnCancel, (XtPointer)saveDialog);
     XtAddCallback(saveDialog, XmNokCallback, _TEST_FileCallback_OnSuccess, (XtPointer)saveDialog);
     XtManageChild(saveDialog);
