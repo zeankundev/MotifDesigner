@@ -7,6 +7,7 @@
 #include <X11/Composite.h>
 #include <X11/Intrinsic.h>
 #include <Xm/FileSB.h>
+#include <Xm/MessageB.h>
 #include <Xm/PushB.h>
 #include <Xm/RowColumn.h>
 #include <Xm/CascadeB.h>
@@ -142,9 +143,47 @@ std::string getDirectory(const std::string& path) {
     return path.substr(0, lastSlash + 1);
 }
 
+void OpenVisualFile(char* filePath) {
+    Logger::log("Opening and parsing");
+    std::ifstream file(filePath);
+    if (!file.is_open()) {
+        Logger::log("Failed to open file");
+        return;
+    }
+    std::vector<CanvasInterface::EditorWidgetInstance> widgetInstanceVectors = Parser::ParseVisualFile(file);
+    file.close();
+    // Log every single widget that was parsed.
+    for (auto& widget : widgetInstanceVectors) {
+        std::stringstream stream;
+        stream  << "[PARSED WIDGET] "
+                << "Type=" << (int)widget.type << " "
+                << "Name=" << widget.name << " "
+                << "Value=" << widget.value << " "
+                << "X=" << widget.x << " "
+                << "Y=" << widget.y << " "
+                << "Width=" << widget.width << " "
+                << "Height=" << widget.height;
+        Logger::log(stream.str().c_str());
+    }
+
+    // Import the vector of widgets into the canvas
+    g_canvas->ImportVectorOfWidgets(widgetInstanceVectors);
+    Logger::log("Imported widgets into the canvas");
+    StatusBar::UpdateStatusBar((std::string("Loaded ") + std::string(filePath) + std::string(" successfully.")).c_str());
+}
+
+void OpenVisualFileCallback(Widget, XtPointer client_data, XtPointer) {
+    Logger::log("Callback to open visual fired");
+    char *filePath = static_cast<char*>(client_data);
+    if (!filePath) {
+        Logger::log("OpenVisualFileCallback: null filePath");
+        return;
+    }
+    OpenVisualFile(filePath);
+}
+
 void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer callData) {
     Widget fileDialog = (Widget)clientData;
-    // Find the filepath that the user picked
     XmFileSelectionBoxCallbackStruct *callback = static_cast<XmFileSelectionBoxCallbackStruct*>(callData);
     char *filePath = nullptr;
     XmStringGetLtoR(callback->value, XmFONTLIST_DEFAULT_TAG, &filePath);
@@ -153,32 +192,24 @@ void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer call
         Logger::log(("User picked: " + std::string(filePath)).c_str());
     } else {
         Logger::log("User cancelled the dialog");
+        XtDestroyWidget(fileDialog);
+        return;
     }
     
     switch (pickerState) {
         case FilePickerState::OpenFile: {
             Logger::log("Requested to open a visual file. (Not Implemented yet)");
-            std::ifstream file(filePath);
-            if (!file.is_open()) {
-                Logger::log("Failed to open file");
-                return;
+            if (g_canvas->GetWidgetList().size() > 0) {
+                char *filePathCopy = XtNewString(filePath);
+                Arg args[1];
+                XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)"This will wipe the canvas. Are you sure you want to proceed?"));
+                Widget question = XmCreateQuestionDialog(g_parent, (char*)"QuestionDialog", args, 1);
+                XtAddCallback(question, XmNokCallback, OpenVisualFileCallback, (XtPointer)filePathCopy);
+                XtManageChild(question);
+            } else {
+                Logger::log("First time opening a visual file in a session");
+                OpenVisualFile(filePath);
             }
-            std::vector<CanvasInterface::EditorWidgetInstance> widgetInstanceVectors = Parser::ParseVisualFile(file);
-            file.close();
-            // Log every single widget that was parsed.
-            for (auto& widget : widgetInstanceVectors) {
-                std::stringstream stream;
-                stream  << "[PARSED WIDGET] "
-                        << "Type=" << (int)widget.type << " "
-                        << "Name=" << widget.name << " "
-                        << "Value=" << widget.value << " "
-                        << "X=" << widget.x << " "
-                        << "Y=" << widget.y << " "
-                        << "Width=" << widget.width << " "
-                        << "Height=" << widget.height << std::endl;
-                Logger::log(stream.str().c_str());
-            }
-            g_canvas->ImportVectorOfWidgets(widgetInstanceVectors);
             break;
         }
         case FilePickerState::SaveFile: {
@@ -188,6 +219,8 @@ void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer call
         }
     }
 
+    // Free the XmString-allocated memory
+    XtFree(filePath);
     XtDestroyWidget(fileDialog);
 }
 
