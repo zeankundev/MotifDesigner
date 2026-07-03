@@ -43,11 +43,17 @@ vector<EditorWidget> Parser::ParseVisualFile(ifstream& stream) {
     string fileVersion;
     bool inWidgetBlock = false;
     bool hasVersion = false;
+    bool hasRootTag = false;
     int num = 0;
     vector<string> tagStack;
     while (getline(stream, line)) {
         num++;
         line = trim(line);
+
+        if (line == "[MotifDesignerVisualFile]") {
+            hasRootTag = true;
+            continue;
+        }
 
         if (line.empty() || line.rfind("&&", 0) == 0) continue;
         if (line.rfind("Version=", 0) == 0) {
@@ -180,6 +186,11 @@ vector<EditorWidget> Parser::ParseVisualFile(ifstream& stream) {
             (char*)(string("Syntax error detected: Missing closing tag [End")
                 + unclosed + "] for [" + unclosed + "]").c_str()
         );
+    }
+    if (!hasRootTag) {
+        Logger::log("[PARSER] [ERR] Missing root tag [MotifDesignerVisualFile]");
+        OnParserFinished(SYNTAX_ERROR,
+            (char*)"Missing root tag [MotifDesignerVisualFile]");
     }
     return widgets;
 }
