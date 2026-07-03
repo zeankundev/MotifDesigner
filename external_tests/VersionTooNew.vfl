@@ -1,0 +1,9 @@
+[MotifDesignerVisualFile]
+Version=999.9
+&& The parser should halt here because 2.5 > 1.0
+
+[Widgets]
+    [Label]
+        name=Title
+    [EndLabel]
+[EndWidgets]

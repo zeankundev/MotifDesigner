@@ -177,41 +177,77 @@ void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer call
     XtDestroyWidget(fileDialog);
 }
 
+static std::vector<std::string> g_pendingParserErrors;
+static Widget g_errorDialog = nullptr;   // persistent single instance
+static bool g_errorDialogVisible = false;
+
+static const char* ErrorToPrefix(Parser::Errors e) {
+    switch (e) {
+        case Parser::Errors::INVALID_VERSION: return "Invalid version";
+        case Parser::Errors::UNKNOWN_VERSION: return "Unknown version";
+        case Parser::Errors::SYNTAX_ERROR:    return "Syntax error";
+        default:                              return "Parser error";
+    }
+}
+
+static void AppendParserError(Parser::Errors error, const char* message) {
+    std::ostringstream line;
+    line << ErrorToPrefix(error);
+    if (message && *message) line << ": " << message;
+    g_pendingParserErrors.push_back(line.str());
+}
+
+static std::string BuildMergedParserErrors() {
+    std::ostringstream merged;
+    merged << "Parsing failed with " << g_pendingParserErrors.size() << " error(s):\n\n";
+    for (size_t i = 0; i < g_pendingParserErrors.size(); ++i) {
+        merged << (i + 1) << ". " << g_pendingParserErrors[i];
+        if (i + 1 < g_pendingParserErrors.size()) merged << '\n';
+    }
+    return merged.str();
+}
+
+static void ClearParserErrorState(Widget, XtPointer, XtPointer) {
+    g_pendingParserErrors.clear();
+    g_errorDialogVisible = false;
+    // keep g_errorDialog allocated for reuse
+}
+
+static void EnsureErrorDialogCreated() {
+    if (g_errorDialog) return;
+
+    Arg args[1];
+    XtSetArg(args[0], XmNdialogStyle, XmDIALOG_PRIMARY_APPLICATION_MODAL);
+    g_errorDialog = XmCreateErrorDialog(g_parent, (char*)"ErrorDialog_popup", args, 1);
+
+    Widget helpButton = XmMessageBoxGetChild(g_errorDialog, XmDIALOG_HELP_BUTTON);
+    XtUnmanageChild(helpButton);
+
+    // When user closes via OK or Cancel, reset accumulation state
+    Widget okBtn = XmMessageBoxGetChild(g_errorDialog, XmDIALOG_OK_BUTTON);
+    Widget cancelBtn = XmMessageBoxGetChild(g_errorDialog, XmDIALOG_CANCEL_BUTTON);
+    XtAddCallback(okBtn, XmNactivateCallback, ClearParserErrorState, nullptr);
+    XtAddCallback(cancelBtn, XmNactivateCallback, ClearParserErrorState, nullptr);
+}
+
 void Parser::OnParserFinished(Errors error, char *message) {
-    switch (error) {
-        case Parser::Errors::OK:
-            Logger::log("Visual file parsed successfully");
-            break;
-        case Parser::Errors::INVALID_VERSION : {
-            Logger::log("Invalid version");
-            Arg args[1];
-            XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized(message));
-            Widget errorDialog = XmCreateErrorDialog(g_parent, (char*)"ErrorDialog", args, 1);
-            Widget helpButton = XmMessageBoxGetChild(errorDialog, XmDIALOG_HELP_BUTTON);
-            XtUnmanageChild(helpButton);
-            XtManageChild(errorDialog);
-            break;
-        }
-        case Parser::Errors::UNKNOWN_VERSION: {
-            Logger::log("Unknown version");
-            Arg args[1];
-            XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized(message));
-            Widget errorDialog = XmCreateErrorDialog(g_parent, (char*)"ErrorDialog", args, 1);
-            Widget helpButton = XmMessageBoxGetChild(errorDialog, XmDIALOG_HELP_BUTTON);
-            XtUnmanageChild(helpButton);
-            XtManageChild(errorDialog);
-            break;
-        }
-        case Parser::Errors::SYNTAX_ERROR: {
-            Logger::log("Syntax error");
-            Arg args[1];
-            XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized(message));
-            Widget errorDialog = XmCreateErrorDialog(g_parent, (char*)"ErrorDialog", args, 1);
-            Widget helpButton = XmMessageBoxGetChild(errorDialog, XmDIALOG_HELP_BUTTON);
-            XtUnmanageChild(helpButton);
-            XtManageChild(errorDialog);
-            break;
-        }
+    if (error == Parser::Errors::OK) {
+        Logger::log("Visual file parsed successfully");
+        return;
+    }
+
+    AppendParserError(error, message);
+    EnsureErrorDialogCreated();
+
+    // Update message on the SAME dialog each time
+    std::string merged = BuildMergedParserErrors();
+    XmString xmMsg = XmStringCreateLocalized(const_cast<char*>(merged.c_str()));
+    XtVaSetValues(g_errorDialog, XmNmessageString, xmMsg, NULL);
+    XmStringFree(xmMsg);
+
+    if (!g_errorDialogVisible) {
+        XtManageChild(g_errorDialog);  // show once
+        g_errorDialogVisible = true;
     }
 }
 

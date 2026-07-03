@@ -5,6 +5,7 @@
 #include <fstream>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 using namespace std;
@@ -17,6 +18,14 @@ string trim(const string& str) {
     return str.substr(first, (last - first + 1));
 }
 
+static const unordered_map<string, CanvasInterface::ToolTypes> typeDatas = {
+    {"Button", CanvasInterface::ToolTypes::Button},
+    {"Label", CanvasInterface::ToolTypes::Label},
+    {"TextField", CanvasInterface::ToolTypes::TextField},
+    {"Toggle", CanvasInterface::ToolTypes::Toggle},
+    {"Frame", CanvasInterface::ToolTypes::Frame}
+};
+
 vector<EditorWidget> Parser::ParseVisualFile(ifstream& stream) {
     vector<EditorWidget> widgets;
     optional<EditorWidget> current;
@@ -25,6 +34,7 @@ vector<EditorWidget> Parser::ParseVisualFile(ifstream& stream) {
     bool inWidgetBlock = false;
     bool hasVersion = false;
     int num = 0;
+    vector<string> tagStack;
     while (getline(stream, line)) {
         num++;
         line = trim(line);
@@ -49,6 +59,57 @@ vector<EditorWidget> Parser::ParseVisualFile(ifstream& stream) {
                 hasVersion = true;
             }
         }
+        if (line == "[MotifDesignerVisualFile]" || line == "[EndMotifDesignerVisualFile]" ||
+            line == "[Widgets]" || line == "[EndWidgets]") {
+                if (inWidgetBlock && (line == "[EndWidgets]" || line == "[MotifDesignerVisualFile]")) {
+                    Logger::log(string(string("[PARSER] [ERR] Syntax error detected at line") + to_string(num) + string(": Unmatched closing tag")).c_str());
+                    OnParserFinished(SYNTAX_ERROR, (char*)(string("Syntax error detected at line ") + to_string(num) + string(": Unmatched closing tag")).c_str());
+                    break;
+                }
+                continue;
+            }
+        if (line.front() == '[' && line.back() == ']') {
+            string tag = line.substr(1, line.size() - 2);
+            if (tag.rfind("End", 0) == 0) {
+                string closingType = tag.substr(3);
+                if (tagStack.empty()) {
+                    Logger::log((std::string("[PARSER] [ERR] Syntax error detected at line ")
+                        + to_string(num) + ": Unexpected closing tag [End" + closingType + "]").c_str());
+                    OnParserFinished(SYNTAX_ERROR, (char*)(std::string("Syntax error detected at line ")
+                        + to_string(num) + ": Unexpected closing tag [End" + closingType + "] without an opening tag").c_str());
+                    break;
+                }
+
+                string expectedType = tagStack.back();
+                if (closingType != expectedType) {
+                    Logger::log((std::string("[PARSER] [ERR] Syntax error detected at line ")
+                        + to_string(num) + ": Mismatched closing tag [End" + closingType + "]").c_str());
+                    OnParserFinished(SYNTAX_ERROR, (char*)(std::string("Syntax error detected at line ")
+                        + to_string(num) + ": Mismatched closing tag [End" + closingType + "] (expected [End" + expectedType + "])").c_str());
+                    break;
+                }
+                tagStack.pop_back();
+            } else {
+                if (typeDatas.count(tag) == 0 && tag != "MotifDesignerVisualFile" && tag != "Widgets") {
+                    Logger::log((std::string("[PARSER] [ERR] Syntax error detected at line ")
+                        + to_string(num) + ": Unexpected tag [" + tag + "]").c_str());
+                    OnParserFinished(SYNTAX_ERROR, (char*)(std::string("Syntax error detected at line ")
+                        + to_string(num) + ": Unexpected tag [" + tag + "]").c_str());
+                    break;
+                }
+                tagStack.push_back(tag);
+            }
+        }
+    }
+    if (!tagStack.empty()) {
+        string unclosed = tagStack.back(); // last opened, first missing close
+        Logger::log((string("[PARSER] [ERR] Syntax error: Unclosed tag [")
+            + unclosed + "]").c_str());
+        OnParserFinished(
+            SYNTAX_ERROR,
+            (char*)(string("Syntax error detected: Missing closing tag [End")
+                + unclosed + "] for [" + unclosed + "]").c_str()
+        );
     }
     return widgets;
 }

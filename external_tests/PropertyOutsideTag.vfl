@@ -1,0 +1,7 @@
+[MotifDesignerVisualFile]
+Version=0.5
+[Widgets]
+
+x=50 && Syntax Error: Property found outside of any component block
+
+[EndWidgets]

@@ -1,0 +1,12 @@
+[MotifDesignerVisualFile]
+Version=0.5
+[Widgets]
+
+    [Panel]
+        name=MainPanel
+        [Button] && Syntax Error: Nested component detected
+            name=InnerButton
+        [EndButton]
+    [EndPanel]
+
+[EndWidgets]

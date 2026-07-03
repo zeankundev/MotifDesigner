@@ -1,0 +1,9 @@
+[MotifDesignerVisualFile]
+Version=0.5
+[Widgets]
+
+    [TextField]
+        name=Username Input
+        width=200
+        
+[EndWidgets] && Syntax Error: Widget [TextField] was never closed!

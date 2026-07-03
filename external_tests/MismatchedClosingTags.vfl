@@ -1,0 +1,10 @@
+[MotifDesignerVisualFile]
+Version=0.5
+[Widgets]
+
+    [Button]
+        name=ClickMe
+    [EndImage]
+    && Syntax Error: Expected [EndButton]
+
+[EndWidgets]
