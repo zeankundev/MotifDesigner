@@ -40,6 +40,7 @@ set(SOURCES
   src/external/TextDialog.cpp
   src/utils/IndividualHeaderSaving.cpp
   src/utils/VisualFileExporter.cpp
+  src/utils/VisualFileParser.cpp
 )
 
 add_executable(MotifDesigner ${SOURCES})

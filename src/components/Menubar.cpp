@@ -1,3 +1,4 @@
+#include "CanvasInterface.h"
 #include "Components.h"
 #include "Logger.h"
 #include "Misc.h"
@@ -14,6 +15,7 @@
 #include <Xm/XmStrDefs.h>
 #include <cstddef>
 #include <cstdlib>
+#include <fstream>
 #include <string>
 
 typedef void (*ActionCallbackVoid)();
@@ -46,6 +48,7 @@ struct MenubarItem {
 
 TextDialog dialog;
 FilePickerState pickerState = FilePickerState::OpenFile;
+Widget g_parent;
 
 void AfterDialogCBTest(Widget w, XtPointer clientData, XtPointer callData) {
     Logger::log("Received callback");
@@ -155,6 +158,13 @@ void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer call
     switch (pickerState) {
         case FilePickerState::OpenFile: {
             Logger::log("Requested to open a visual file. (Not Implemented yet)");
+            std::ifstream file(filePath);
+            if (!file.is_open()) {
+                Logger::log("Failed to open file");
+                return;
+            }
+            std::vector<CanvasInterface::EditorWidgetInstance> widgetInstanceVectors = Parser::ParseVisualFile(file);
+            file.close();
             break;
         }
         case FilePickerState::SaveFile: {
@@ -165,6 +175,44 @@ void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer call
     }
 
     XtDestroyWidget(fileDialog);
+}
+
+void Parser::OnParserFinished(Errors error, char *message) {
+    switch (error) {
+        case Parser::Errors::OK:
+            Logger::log("Visual file parsed successfully");
+            break;
+        case Parser::Errors::INVALID_VERSION : {
+            Logger::log("Invalid version");
+            Arg args[1];
+            XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized(message));
+            Widget errorDialog = XmCreateErrorDialog(g_parent, (char*)"ErrorDialog", args, 1);
+            Widget helpButton = XmMessageBoxGetChild(errorDialog, XmDIALOG_HELP_BUTTON);
+            XtUnmanageChild(helpButton);
+            XtManageChild(errorDialog);
+            break;
+        }
+        case Parser::Errors::UNKNOWN_VERSION: {
+            Logger::log("Unknown version");
+            Arg args[1];
+            XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized(message));
+            Widget errorDialog = XmCreateErrorDialog(g_parent, (char*)"ErrorDialog", args, 1);
+            Widget helpButton = XmMessageBoxGetChild(errorDialog, XmDIALOG_HELP_BUTTON);
+            XtUnmanageChild(helpButton);
+            XtManageChild(errorDialog);
+            break;
+        }
+        case Parser::Errors::SYNTAX_ERROR: {
+            Logger::log("Syntax error");
+            Arg args[1];
+            XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized(message));
+            Widget errorDialog = XmCreateErrorDialog(g_parent, (char*)"ErrorDialog", args, 1);
+            Widget helpButton = XmMessageBoxGetChild(errorDialog, XmDIALOG_HELP_BUTTON);
+            XtUnmanageChild(helpButton);
+            XtManageChild(errorDialog);
+            break;
+        }
+    }
 }
 
 void _TEST_SaveFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
@@ -244,6 +292,7 @@ void _TEST_OpenFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
 }
 
 Widget Components::RenderMenubar(Widget parent) {
+    g_parent = parent;
     Arg args[20];
     int n = 0;
 
