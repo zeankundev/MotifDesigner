@@ -168,6 +168,12 @@ void CanvasInterface::ScheduleRedraw() {
     }
 }
 
+void CanvasInterface::ImportVectorOfWidgets(const std::vector<EditorWidgetInstance>& widgetsFromMethod) {
+    widgets.clear();
+    widgets = widgetsFromMethod;
+    ScheduleRedraw();
+}
+
 void CanvasInterface::DrawWidgetElement(Display* display, Window win, const EditorWidgetInstance& widget) {
     if (!display || !win || !widgetBackgroundContext || !textContext) return;
 

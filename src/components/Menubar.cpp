@@ -178,6 +178,7 @@ void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer call
                         << "Height=" << widget.height << std::endl;
                 Logger::log(stream.str().c_str());
             }
+            g_canvas->ImportVectorOfWidgets(widgetInstanceVectors);
             break;
         }
         case FilePickerState::SaveFile: {

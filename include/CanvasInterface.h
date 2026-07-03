@@ -37,6 +37,7 @@ public:
         ) : type(t), name(n), value(l), x(px), y(py), width(w), height(h), selected(false) {}
     };
     static void InitializeGraphicContexts(Widget canvas);
+    void ImportVectorOfWidgets(const std::vector<EditorWidgetInstance>& widgets);
     void DrawGrid(Display* display, Window win, int width, int height);
     void DrawBevel(Display* display, Window win, int x, int y, int width, int height, bool sunken);
     void DrawWidgetElement(Display* display, Window win, const EditorWidgetInstance& widget);
