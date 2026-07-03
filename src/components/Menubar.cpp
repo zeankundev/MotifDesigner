@@ -165,6 +165,19 @@ void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer call
             }
             std::vector<CanvasInterface::EditorWidgetInstance> widgetInstanceVectors = Parser::ParseVisualFile(file);
             file.close();
+            // Log every single widget that was parsed.
+            for (auto& widget : widgetInstanceVectors) {
+                std::stringstream stream;
+                stream  << "[PARSED WIDGET] "
+                        << "Type=" << (int)widget.type << " "
+                        << "Name=" << widget.name << " "
+                        << "Value=" << widget.value << " "
+                        << "X=" << widget.x << " "
+                        << "Y=" << widget.y << " "
+                        << "Width=" << widget.width << " "
+                        << "Height=" << widget.height << std::endl;
+                Logger::log(stream.str().c_str());
+            }
             break;
         }
         case FilePickerState::SaveFile: {

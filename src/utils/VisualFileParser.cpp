@@ -1,6 +1,7 @@
 #include "CanvasInterface.h"
 #include "Logger.h"
 #include "Misc.h"
+#include <cstddef>
 #include <cstdlib>
 #include <fstream>
 #include <optional>
@@ -25,6 +26,15 @@ static const unordered_map<string, CanvasInterface::ToolTypes> typeDatas = {
     {"Toggle", CanvasInterface::ToolTypes::Toggle},
     {"Frame", CanvasInterface::ToolTypes::Frame}
 };
+
+std::optional<CanvasInterface::ToolTypes> ParseToolType(const std::string& tag) {
+    if (tag == "Button") return CanvasInterface::ToolTypes::Button;
+    if (tag == "Label") return CanvasInterface::ToolTypes::Label;
+    if (tag == "TextField") return CanvasInterface::ToolTypes::TextField;
+    if (tag == "Toggle") return CanvasInterface::ToolTypes::Toggle;
+    if (tag == "Frame") return CanvasInterface::ToolTypes::Frame;
+    return std::nullopt;
+}
 
 vector<EditorWidget> Parser::ParseVisualFile(ifstream& stream) {
     vector<EditorWidget> widgets;
@@ -58,6 +68,7 @@ vector<EditorWidget> Parser::ParseVisualFile(ifstream& stream) {
                 Logger::log("[PARSER] Valid version. Continuing...");
                 hasVersion = true;
             }
+            continue;
         }
         if (line == "[MotifDesignerVisualFile]" || line == "[EndMotifDesignerVisualFile]" ||
             line == "[Widgets]" || line == "[EndWidgets]") {
@@ -88,17 +99,76 @@ vector<EditorWidget> Parser::ParseVisualFile(ifstream& stream) {
                         + to_string(num) + ": Mismatched closing tag [End" + closingType + "] (expected [End" + expectedType + "])").c_str());
                     break;
                 }
-                tagStack.pop_back();
-            } else {
-                if (typeDatas.count(tag) == 0 && tag != "MotifDesignerVisualFile" && tag != "Widgets") {
-                    Logger::log((std::string("[PARSER] [ERR] Syntax error detected at line ")
-                        + to_string(num) + ": Unexpected tag [" + tag + "]").c_str());
-                    OnParserFinished(SYNTAX_ERROR, (char*)(std::string("Syntax error detected at line ")
-                        + to_string(num) + ": Unexpected tag [" + tag + "]").c_str());
-                    break;
+
+                if (inWidgetBlock && current.has_value()) {
+                    auto type = ParseToolType(closingType);
+                    if (!type.has_value() || current->type != type.value()) {
+                        Logger::log((std::string("[PARSER] [ERR] Syntax error detected at line ")
+                            + to_string(num) + ": Mismatched closing tag [End" + closingType + "]").c_str());
+                        OnParserFinished(SYNTAX_ERROR, (char*)(std::string("Syntax error detected at line ")
+                            + to_string(num) + ": Mismatched closing tag [End" + closingType + "] (expected [End" + expectedType + "])").c_str());
+                        break;
+                    }
+                    if (current->name.empty()) {
+                        Logger::log((std::string("[PARSER] [ERR] Syntax error detected at line ")
+                            + to_string(num) + ": Widget without a name").c_str());
+                        OnParserFinished(SYNTAX_ERROR, (char*)(std::string("Syntax error detected at line ")
+                            + to_string(num) + ": Widget without a name").c_str());
+                        break;
+                    }
+                    widgets.push_back(current.value());
+                    current.reset();
+                    inWidgetBlock = false;
                 }
-                tagStack.push_back(tag);
+                tagStack.pop_back();
+                continue;
+            } else {
+                // opening tag
+                if (tag == "MotifDesignerVisualFile" || tag == "Widgets") {
+                    tagStack.push_back(tag);
+                    continue;
+                }
+
+                auto type = ParseToolType(tag);
+                if (type.has_value()) {
+                    if (inWidgetBlock) {
+                        Logger::log((std::string("[PARSER] [ERR] Syntax error detected at line ")
+                            + to_string(num) + ": Nested widget blocks are not allowed").c_str());
+                        OnParserFinished(SYNTAX_ERROR, (char*)(std::string("Syntax error detected at line ")
+                            + to_string(num) + ": Nested widget blocks are not allowed").c_str());
+                        break;
+                    }
+
+                    current = EditorWidget(type.value(), "", "", 0, 0, 0, 0);
+                    inWidgetBlock = true;
+                    tagStack.push_back(tag);
+                    continue; // NOT break
+                }
+
+                Logger::log((std::string("[PARSER] [ERR] Syntax error detected at line ")
+                    + to_string(num) + ": Unexpected tag [" + tag + "]").c_str());
+                OnParserFinished(SYNTAX_ERROR, (char*)(std::string("Syntax error detected at line ")
+                    + to_string(num) + ": Unexpected tag [" + tag + "]").c_str());
+                break;
             }
+        }
+        size_t delimPos = line.find('=');
+        if (delimPos != string::npos) {
+            if (!inWidgetBlock) {
+                Logger::log((std::string("[PARSER] [ERR] Syntax error detected at line ")
+                        + to_string(num) + ": Unexpected assignment operator").c_str());
+                    OnParserFinished(SYNTAX_ERROR, (char*)(std::string("Syntax error detected at line ")
+                        + to_string(num) + ": Unexpected assignment operator").c_str());
+                    break;
+            }
+            string key = trim(line.substr(0, delimPos));
+            string value = trim(line.substr(delimPos + 1));
+            if (key == "name") current->name = value;
+            else if (key == "value") current->value = value;
+            else if (key == "x") current->x = stoi(value);
+            else if (key == "y") current->y = stoi(value);
+            else if (key == "width") current->width = stoi(value);
+            else if (key == "height") current->height = stoi(value);
         }
     }
     if (!tagStack.empty()) {
