@@ -206,6 +206,8 @@ void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer call
                 Arg args[1];
                 XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)"This will wipe the canvas. Are you sure you want to proceed?"));
                 Widget question = XmCreateQuestionDialog(g_parent, (char*)"QuestionDialog", args, 1);
+                Widget helpButton = XmMessageBoxGetChild(question, (unsigned char)XmDIALOG_HELP_BUTTON);
+                XtUnmanageChild(helpButton);
                 XtAddCallback(question, XmNokCallback, OpenVisualFileCallback, (XtPointer)filePathCopy);
                 XtManageChild(question);
             } else {
