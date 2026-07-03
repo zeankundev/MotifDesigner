@@ -51,6 +51,8 @@ TextDialog dialog;
 FilePickerState pickerState = FilePickerState::OpenFile;
 Widget g_parent;
 char* ProjectManager::currentVisualFilePath = nullptr;
+bool previousOneHasErrors = false;
+bool hasParserErrors = false;
 
 void AfterDialogCBTest(Widget w, XtPointer clientData, XtPointer callData) {
     Logger::log("Received callback");
@@ -145,6 +147,7 @@ std::string getDirectory(const std::string& path) {
 }
 
 void OpenVisualFile(char* filePath) {
+    hasParserErrors = false;
     Logger::log("Opening and parsing");
     std::ifstream file(filePath);
     if (!file.is_open()) {
@@ -168,10 +171,15 @@ void OpenVisualFile(char* filePath) {
     }
 
     // Import the vector of widgets into the canvas
-    g_canvas->ImportVectorOfWidgets(widgetInstanceVectors);
-    Logger::log("Imported widgets into the canvas");
-    StatusBar::UpdateStatusBar((std::string("Loaded ") + std::string(filePath) + std::string(" successfully.")).c_str());
-    ProjectManager::SetCurrentVisualFilePath(filePath);
+    if (!hasParserErrors) {
+        g_canvas->ImportVectorOfWidgets(widgetInstanceVectors);
+        Logger::log("Imported widgets into the canvas");
+        StatusBar::UpdateStatusBar((std::string("Loaded ") + std::string(filePath) + std::string(" successfully.")).c_str());
+        ProjectManager::SetCurrentVisualFilePath(filePath);
+        previousOneHasErrors = false;
+    } else {
+        Logger::log("Skipping import because there were parser errors");
+    }
 }
 
 void OpenVisualFileCallback(Widget, XtPointer client_data, XtPointer) {
@@ -201,7 +209,7 @@ void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer call
     switch (pickerState) {
         case FilePickerState::OpenFile: {
             Logger::log("Requested to open a visual file. (Not Implemented yet)");
-            if (g_canvas->GetWidgetList().size() > 0) {
+            if (g_canvas->GetWidgetList().size() > 0 && !previousOneHasErrors) {
                 char *filePathCopy = XtNewString(filePath);
                 Arg args[1];
                 XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)"This will wipe the canvas. Are you sure you want to proceed?"));
@@ -249,6 +257,8 @@ static void AppendParserError(Parser::Errors error, const char* message) {
 }
 
 static std::string BuildMergedParserErrors() {
+    previousOneHasErrors = true;
+    hasParserErrors = true;
     std::ostringstream merged;
     bool usePlural = g_pendingParserErrors.size() != 1;
     merged << "Parsing failed with " << g_pendingParserErrors.size() << " error" << (usePlural ? "s" : "") << ":\n\n";
