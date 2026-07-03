@@ -7,6 +7,7 @@
 class MiscFunctions {
     public:
         static void ShowAboutDialog(Widget parent);
+        static void UpdateTitle(const char* filePath);
 };
 class Parser {
     public:

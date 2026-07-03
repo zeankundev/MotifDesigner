@@ -13,8 +13,15 @@
 
 using namespace std;
 
+Widget topLevelWindow;
+
 void ShowAboutCallback(Widget w, XtPointer clientData, XtPointer callData) {
     MiscFunctions::ShowAboutDialog(w);
+}
+
+void MiscFunctions::UpdateTitle(const char* filePath) {
+    string title = string(filePath) + " - MotifDesigner";
+    XtVaSetValues(topLevelWindow, XmNtitle, title.c_str(), NULL);
 }
 
 Widget InitializeUI(Widget parent) {
@@ -75,8 +82,9 @@ int main(int argc, char **argv) {
         XmNheight, 600,
         XmNminWidth, 900,
         XmNminHeight, 600,
-        XmNtitle, "MotifDesigner - Something modern for your X11",
+        XmNtitle, "<empty project> - MotifDesigner",
         NULL);
+    topLevelWindow = shell;
     Widget display = XmGetXmDisplay(XtDisplay(shell));
     XtVaSetValues(display, XmNtoolTipEnable, True, NULL);
     InitializeUI(shell);

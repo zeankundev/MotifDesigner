@@ -50,6 +50,7 @@ struct MenubarItem {
 TextDialog dialog;
 FilePickerState pickerState = FilePickerState::OpenFile;
 Widget g_parent;
+char* ProjectManager::currentVisualFilePath = nullptr;
 
 void AfterDialogCBTest(Widget w, XtPointer clientData, XtPointer callData) {
     Logger::log("Received callback");
@@ -170,6 +171,7 @@ void OpenVisualFile(char* filePath) {
     g_canvas->ImportVectorOfWidgets(widgetInstanceVectors);
     Logger::log("Imported widgets into the canvas");
     StatusBar::UpdateStatusBar((std::string("Loaded ") + std::string(filePath) + std::string(" successfully.")).c_str());
+    ProjectManager::SetCurrentVisualFilePath(filePath);
 }
 
 void OpenVisualFileCallback(Widget, XtPointer client_data, XtPointer) {
@@ -214,13 +216,13 @@ void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer call
         }
         case FilePickerState::SaveFile: {
             Logger::log("Requested to save a visual file. (Not Implemented yet)");
+            ProjectManager::SetCurrentVisualFilePath(filePath);
             ProjectManager::ExportVisualFile(filePath);
             break;
         }
     }
 
     // Free the XmString-allocated memory
-    XtFree(filePath);
     XtDestroyWidget(fileDialog);
 }
 
@@ -300,66 +302,70 @@ void Parser::OnParserFinished(Errors error, char *message) {
 }
 
 void _TEST_SaveFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
-    Widget parent = (Widget)clientData;
-    pickerState = FilePickerState::SaveFile;
-    Arg args[16];
-    int n = 0;
+    if (ProjectManager::GetCurrentVisualFilePath() == nullptr || ProjectManager::GetCurrentVisualFilePath() == "") {
+        Widget parent = (Widget)clientData;
+        pickerState = FilePickerState::SaveFile;
+        Arg args[16];
+        int n = 0;
 
-    // 1. Reset the sticky cache to default when the dialog opens
-    g_LastTypedFilename = "NewVisualFile.vfl";
+        // 1. Reset the sticky cache to default when the dialog opens
+        g_LastTypedFilename = "NewVisualFile.vfl";
 
-    XtSetArg(args[n], XmNdialogTitle, XmStringCreateLocalized((char*)"Save Visual File")); n++;
-    
-    // 2. Create the dialog frame first so we can extract its default directory context
-    Widget saveDialog = XmCreateFileSelectionDialog(parent, (char*)"SaveFileDialog", args, n);
+        XtSetArg(args[n], XmNdialogTitle, XmStringCreateLocalized((char*)"Save Visual File")); n++;
+        
+        // 2. Create the dialog frame first so we can extract its default directory context
+        Widget saveDialog = XmCreateFileSelectionDialog(parent, (char*)"SaveFileDialog", args, n);
 
-    // 3. Extract the actual current directory Motif is looking at
-    n = 0;
-    XmString xmDir = nullptr;
-    XtSetArg(args[0], XmNdirectory, &xmDir);
-    XtGetValues(saveDialog, args, 1);
+        // 3. Extract the actual current directory Motif is looking at
+        n = 0;
+        XmString xmDir = nullptr;
+        XtSetArg(args[0], XmNdirectory, &xmDir);
+        XtGetValues(saveDialog, args, 1);
 
-    char *dirPath = nullptr;
-    XmStringGetLtoR(xmDir, XmFONTLIST_DEFAULT_TAG, &dirPath);
-    std::string absoluteDir = dirPath ? std::string(dirPath) : "";
-    XtFree(dirPath);
+        char *dirPath = nullptr;
+        XmStringGetLtoR(xmDir, XmFONTLIST_DEFAULT_TAG, &dirPath);
+        std::string absoluteDir = dirPath ? std::string(dirPath) : "";
+        XtFree(dirPath);
 
-    // Fallback security if directory resolution fails
-    if (absoluteDir.empty()) {
-        const char* home = getenv("HOME");
-        absoluteDir = home ? std::string(home) + "/" : "./";
+        // Fallback security if directory resolution fails
+        if (absoluteDir.empty()) {
+            const char* home = getenv("HOME");
+            absoluteDir = home ? std::string(home) + "/" : "./";
+        }
+
+        // 4. Construct the full template path (e.g., /home/zean/Projects/NewVisualFile.vfl)
+        std::string fullInitialPath = absoluteDir + g_LastTypedFilename;
+        XmString xmDefaultSpec = XmStringCreateLocalized((char*)fullInitialPath.c_str());
+        
+        // 5. Force Motif to use the full path specification as the baseline text selection
+        n = 0;
+        XtSetArg(args[n], XmNdirSpec, xmDefaultSpec); n++;
+        XtSetValues(saveDialog, args, n);
+        XmStringFree(xmDefaultSpec);
+
+        // Clean up UI layout hooks
+        Widget helpButton = XmFileSelectionBoxGetChild(saveDialog, (unsigned char)XmDIALOG_HELP_BUTTON);
+        XtUnmanageChild(helpButton);
+
+        // A. Track user keystrokes on the input field dynamically
+        Widget selectionTextField = XmFileSelectionBoxGetChild(saveDialog, (unsigned char)XmDIALOG_TEXT);
+        if (selectionTextField) {
+            XtAddCallback(selectionTextField, XmNvalueChangedCallback, _TEST_FileCallback_OnTextChange, nullptr);
+        }
+
+        // B. Catch directory jumps
+        Widget dirList = XmFileSelectionBoxGetChild(saveDialog, (unsigned char)XmDIALOG_DIR_LIST);
+        if (dirList) {
+            XtAddCallback(dirList, XmNbrowseSelectionCallback, _TEST_FileCallback_OnDirSelect, (XtPointer)saveDialog);
+            XtAddCallback(dirList, XmNdefaultActionCallback, _TEST_FileCallback_OnDirSelect, (XtPointer)saveDialog);
+        }
+
+        XtAddCallback(saveDialog, XmNcancelCallback, _TEST_FileCallback_OnCancel, (XtPointer)saveDialog);
+        XtAddCallback(saveDialog, XmNokCallback, _TEST_FileCallback_OnSuccess, (XtPointer)saveDialog);
+        XtManageChild(saveDialog);
+    } else {
+        ProjectManager::ExportVisualFile(ProjectManager::GetCurrentVisualFilePath());
     }
-
-    // 4. Construct the full template path (e.g., /home/zean/Projects/NewVisualFile.vfl)
-    std::string fullInitialPath = absoluteDir + g_LastTypedFilename;
-    XmString xmDefaultSpec = XmStringCreateLocalized((char*)fullInitialPath.c_str());
-    
-    // 5. Force Motif to use the full path specification as the baseline text selection
-    n = 0;
-    XtSetArg(args[n], XmNdirSpec, xmDefaultSpec); n++;
-    XtSetValues(saveDialog, args, n);
-    XmStringFree(xmDefaultSpec);
-
-    // Clean up UI layout hooks
-    Widget helpButton = XmFileSelectionBoxGetChild(saveDialog, (unsigned char)XmDIALOG_HELP_BUTTON);
-    XtUnmanageChild(helpButton);
-
-    // A. Track user keystrokes on the input field dynamically
-    Widget selectionTextField = XmFileSelectionBoxGetChild(saveDialog, (unsigned char)XmDIALOG_TEXT);
-    if (selectionTextField) {
-        XtAddCallback(selectionTextField, XmNvalueChangedCallback, _TEST_FileCallback_OnTextChange, nullptr);
-    }
-
-    // B. Catch directory jumps
-    Widget dirList = XmFileSelectionBoxGetChild(saveDialog, (unsigned char)XmDIALOG_DIR_LIST);
-    if (dirList) {
-        XtAddCallback(dirList, XmNbrowseSelectionCallback, _TEST_FileCallback_OnDirSelect, (XtPointer)saveDialog);
-        XtAddCallback(dirList, XmNdefaultActionCallback, _TEST_FileCallback_OnDirSelect, (XtPointer)saveDialog);
-    }
-
-    XtAddCallback(saveDialog, XmNcancelCallback, _TEST_FileCallback_OnCancel, (XtPointer)saveDialog);
-    XtAddCallback(saveDialog, XmNokCallback, _TEST_FileCallback_OnSuccess, (XtPointer)saveDialog);
-    XtManageChild(saveDialog);
 }
 
 void _TEST_OpenFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
