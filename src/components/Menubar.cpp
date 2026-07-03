@@ -199,7 +199,8 @@ static void AppendParserError(Parser::Errors error, const char* message) {
 
 static std::string BuildMergedParserErrors() {
     std::ostringstream merged;
-    merged << "Parsing failed with " << g_pendingParserErrors.size() << " error(s):\n\n";
+    bool usePlural = g_pendingParserErrors.size() != 1;
+    merged << "Parsing failed with " << g_pendingParserErrors.size() << " error" << (usePlural ? "s" : "") << ":\n\n";
     for (size_t i = 0; i < g_pendingParserErrors.size(); ++i) {
         merged << (i + 1) << ". " << g_pendingParserErrors[i];
         if (i + 1 < g_pendingParserErrors.size()) merged << '\n';
