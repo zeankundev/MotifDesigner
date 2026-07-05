@@ -11,7 +11,11 @@ class ProjectManager {
         static void ExportVisualFile(char* pathToSave);
         static void SetCurrentVisualFilePath(char* pathToSave) {
             currentVisualFilePath = pathToSave;
-            MiscFunctions::UpdateTitle(currentVisualFilePath);
+            if (pathToSave == nullptr || pathToSave == "") {
+                MiscFunctions::UpdateTitle("<empty project>");
+            } else {
+                MiscFunctions::UpdateTitle(currentVisualFilePath);
+            }
         };
         static char* GetCurrentVisualFilePath() {
             return currentVisualFilePath;

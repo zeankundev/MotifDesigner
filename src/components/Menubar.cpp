@@ -65,7 +65,7 @@ void SpawnDialogTest(Widget w, XtPointer clientData, XtPointer callData) {
     dialog.SpawnDialogInstance(parent, "Enter a class name.\nThis is required so we can generate proper header files", AfterDialogCBTest);
 }
 
-void _TEST_FileCallback_OnCancel(Widget w, XtPointer clientData, XtPointer callData) {
+void FileCallback_OnCancel(Widget w, XtPointer clientData, XtPointer callData) {
     Widget fileDialog = (Widget)clientData;
     Logger::log("Nothing is picked to be saved");
     XtDestroyWidget(fileDialog);
@@ -81,7 +81,7 @@ std::string getFilename(const std::string& path) {
 static std::string g_LastTypedFilename = "NewVisualFile.vfl";
 
 // Callback that tracks the text field changes safely without modifying them
-void _TEST_FileCallback_OnTextChange(Widget w, XtPointer clientData, XtPointer callData) {
+void FileCallback_OnTextChange(Widget w, XtPointer clientData, XtPointer callData) {
     char *currentText = XmTextGetString(w);
     if (!currentText) return;
 
@@ -132,7 +132,7 @@ void _DeferredDirFixTimer(XtPointer clientData, XtIntervalId *id) {
 }
 
 // Fired when a directory is chosen or double-clicked from the list box
-void _TEST_FileCallback_OnDirSelect(Widget w, XtPointer clientData, XtPointer callData) {
+void FileCallback_OnDirSelect(Widget w, XtPointer clientData, XtPointer callData) {
     Widget fileDialog = (Widget)clientData;
     
     DirFixContext *ctx = new DirFixContext{ fileDialog, w };
@@ -192,7 +192,7 @@ void OpenVisualFileCallback(Widget, XtPointer client_data, XtPointer) {
     OpenVisualFile(filePath);
 }
 
-void _TEST_FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer callData) {
+void FileCallback_OnSuccess(Widget w, XtPointer clientData, XtPointer callData) {
     Widget fileDialog = (Widget)clientData;
     XmFileSelectionBoxCallbackStruct *callback = static_cast<XmFileSelectionBoxCallbackStruct*>(callData);
     char *filePath = nullptr;
@@ -313,7 +313,7 @@ void Parser::OnParserFinished(Errors error, char *message) {
     }
 }
 
-void _TEST_SaveFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
+void SaveFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
     if (ProjectManager::GetCurrentVisualFilePath() == nullptr || ProjectManager::GetCurrentVisualFilePath() == "") {
         Widget parent = (Widget)clientData;
         pickerState = FilePickerState::SaveFile;
@@ -362,25 +362,25 @@ void _TEST_SaveFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
         // A. Track user keystrokes on the input field dynamically
         Widget selectionTextField = XmFileSelectionBoxGetChild(saveDialog, (unsigned char)XmDIALOG_TEXT);
         if (selectionTextField) {
-            XtAddCallback(selectionTextField, XmNvalueChangedCallback, _TEST_FileCallback_OnTextChange, nullptr);
+            XtAddCallback(selectionTextField, XmNvalueChangedCallback, FileCallback_OnTextChange, nullptr);
         }
 
         // B. Catch directory jumps
         Widget dirList = XmFileSelectionBoxGetChild(saveDialog, (unsigned char)XmDIALOG_DIR_LIST);
         if (dirList) {
-            XtAddCallback(dirList, XmNbrowseSelectionCallback, _TEST_FileCallback_OnDirSelect, (XtPointer)saveDialog);
-            XtAddCallback(dirList, XmNdefaultActionCallback, _TEST_FileCallback_OnDirSelect, (XtPointer)saveDialog);
+            XtAddCallback(dirList, XmNbrowseSelectionCallback, FileCallback_OnDirSelect, (XtPointer)saveDialog);
+            XtAddCallback(dirList, XmNdefaultActionCallback, FileCallback_OnDirSelect, (XtPointer)saveDialog);
         }
 
-        XtAddCallback(saveDialog, XmNcancelCallback, _TEST_FileCallback_OnCancel, (XtPointer)saveDialog);
-        XtAddCallback(saveDialog, XmNokCallback, _TEST_FileCallback_OnSuccess, (XtPointer)saveDialog);
+        XtAddCallback(saveDialog, XmNcancelCallback, FileCallback_OnCancel, (XtPointer)saveDialog);
+        XtAddCallback(saveDialog, XmNokCallback, FileCallback_OnSuccess, (XtPointer)saveDialog);
         XtManageChild(saveDialog);
     } else {
         ProjectManager::ExportVisualFile(ProjectManager::GetCurrentVisualFilePath());
     }
 }
 
-void _TEST_OpenFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
+void OpenFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
     Widget parent = (Widget)clientData;
     pickerState = FilePickerState::OpenFile;
     Arg args[16];
@@ -388,9 +388,26 @@ void _TEST_OpenFileDialog(Widget w, XtPointer clientData, XtPointer callData) {
 
     XtSetArg(args[n], XmNdialogTitle, XmStringCreateLocalized((char*)"Open Visual File")); n++;
     Widget openDialog = XmCreateFileSelectionDialog(parent, (char*)"OpenFileDialog", args, n);
-    XtAddCallback(openDialog, XmNcancelCallback, _TEST_FileCallback_OnCancel, (XtPointer)openDialog);
-    XtAddCallback(openDialog, XmNokCallback, _TEST_FileCallback_OnSuccess, (XtPointer)openDialog);
+    XtAddCallback(openDialog, XmNcancelCallback, FileCallback_OnCancel, (XtPointer)openDialog);
+    XtAddCallback(openDialog, XmNokCallback, FileCallback_OnSuccess, (XtPointer)openDialog);
     XtManageChild(openDialog);
+}
+
+void CreateNewVisualFile(Widget w, XtPointer clientData, XtPointer callData) {
+    ProjectManager::SetCurrentVisualFilePath("");
+    g_canvas->ImportVectorOfWidgets({});
+}
+    
+
+void CreateNewVisualFileCB(Widget w, XtPointer clientData, XtPointer callData) {
+    Widget parent = (Widget)clientData;
+    Arg args[1];
+    XtSetArg(args[0], XmNmessageString, XmStringCreateLocalized((char*)"This will create a new visual file. Any unsaved work will be lost. Continue?"));
+    Widget question = XmCreateQuestionDialog(parent, (char*)"QuestionDialog", args, 1);
+    Widget helpButton = XmMessageBoxGetChild(question, (unsigned char)XmDIALOG_HELP_BUTTON);
+    XtUnmanageChild(helpButton);
+    XtAddCallback(question, XmNokCallback, CreateNewVisualFile, (XtPointer)question);
+    XtManageChild(question);
 }
 
 Widget Components::RenderMenubar(Widget parent) {
@@ -404,10 +421,10 @@ Widget Components::RenderMenubar(Widget parent) {
         // todo 1.2: implement project structuring for projects
         // MENU_ITEM_VOID("New Project", nullptr),
         // todo 1.0: add basic visual file editing, saving, etc.
-        // MENU_ITEM_VOID("New Visual File", nullptr),
+        MENU_ITEM_VOID("New Visual File", CreateNewVisualFileCB),
         // MENU_ITEM_VOID("Open Project", nullptr),
-        MENU_ITEM_VOID("Open Visual File", _TEST_OpenFileDialog),
-        MENU_ITEM_VOID("Save Visual File", _TEST_SaveFileDialog),
+        MENU_ITEM_VOID("Open Visual File", OpenFileDialog),
+        MENU_ITEM_VOID("Save Visual File", SaveFileDialog),
         MENU_ITEM_VOID("Exit", std::quick_exit),
     };
 
