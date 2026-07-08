@@ -24,7 +24,7 @@ jobs:
           sudo apt-get install -y cmake libfuse2 build-essential wget \
             libx11-dev libxt-dev libxmu-dev libxpm-dev \
             x11proto-dev libxext-dev xutils-dev x11proto-core-dev \
-            libmotif-dev # <--- Adds generic open-source motif libraries
+            libmotif-dev libxrandr2 libxrandr-dev
 
       - name: Setup Legacy X11 Print Header Stub
         run: sudo mkdir -p /usr/include/X11/extensions && sudo cp include/Print.h /usr/include/X11/extensions/
