@@ -56,6 +56,7 @@ target_link_libraries(MotifDesigner PRIVATE
     ${MOTIF_LIBRARY}
     ${X11_Xt_LIB}
     ${X11_X11_LIB}
+    Xrandr
     Xpm
 )
 

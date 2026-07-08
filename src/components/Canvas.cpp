@@ -4,6 +4,7 @@
 #include <X11/Composite.h>
 #include <X11/ICE/ICElib.h>
 #include <X11/Intrinsic.h>
+#include <X11/extensions/Xrandr.h>
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -17,6 +18,7 @@
 #include <vector>
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 
 enum class ResizeHandle {
     Nothing,
@@ -65,7 +67,8 @@ bool requiresRedraw = false;
 bool isEnteringVisualStyleTextInput = false;
 
 static XtIntervalId pendingRedrawTimer = 0;
-const unsigned int REDRAW_DEBOUNCE_MS = 16;
+const unsigned int _DEFAULT_REDRAW_DEBOUNCE_MS = 16;
+unsigned int redrawDebounceMs = 16;
 
 Time lastClickTime = 0;
 int lastClickX = 0;
@@ -77,6 +80,24 @@ CanvasInterface::SelectedTextRegion selectedTextRegion;
 int selectionAnchorIndex = -1;
 std::string textEditClipboard;
 const int textCharWidth = 6;
+
+unsigned int DetectRefreshIntervalMs(Widget canvas) {
+    if (!canvas || XtIsRealized(canvas)) return _DEFAULT_REDRAW_DEBOUNCE_MS;
+    Display* display = XtDisplay(canvas);
+    Window win = XtWindow(canvas);
+    if (!display || !win) return _DEFAULT_REDRAW_DEBOUNCE_MS;
+    int major = 0, minor = 0;
+    if (!XRRQueryVersion(display, &major, &minor)) return _DEFAULT_REDRAW_DEBOUNCE_MS;
+
+    XRRScreenConfiguration* config = XRRGetScreenInfo(display, win);
+    if (!config) return _DEFAULT_REDRAW_DEBOUNCE_MS;
+    short rate = XRRConfigCurrentRate(config);
+    if (rate <= 0) return _DEFAULT_REDRAW_DEBOUNCE_MS;
+    
+    unsigned int interval = (unsigned int)((1000.0 / (double)rate) + 0.5);
+    if (interval < 1) interval = 1;
+    return interval;
+}
 
 bool IsDoubleClick(int x, int y, Time currentTime) {
     static constexpr Time DOUBLE_CLICK_MS = 1500;
@@ -161,6 +182,9 @@ void CanvasInterface::InitializeGraphicContexts(Widget canvas) {
     XAllocNamedColor(display, cmap, "#99CCFF", &color, &exact);
     values.foreground = color.pixel;
     textHighlightContext = XCreateGC(display, win, GCForeground, &values);
+
+    redrawDebounceMs = DetectRefreshIntervalMs(canvas);
+    Logger::log((std::string("Initialized graphic contexts. Redraw debounce: ") + std::to_string(redrawDebounceMs) + "ms").c_str());
 
     graphicsContextsInitialized = true;
 }
@@ -310,21 +334,23 @@ void CanvasInterface::DrawBevel(Display* display, Window win, int x, int y, int 
 }
 
 static void FixedRedrawCb(XtPointer clientData, XtIntervalId* id) {
+    pendingRedrawTimer = 0;
     if (g_canvas) {
         g_canvas->RefreshCanvas();
+        g_canvas->ScheduleRedraw();
     }
-    pendingRedrawTimer = 0;
 }
 
 void CanvasInterface::ScheduleRedraw() {
     if (pendingRedrawTimer != 0) {
-        return;
+        XtRemoveTimeOut(pendingRedrawTimer);
+        pendingRedrawTimer = 0;
     }
 
     if (this->canvas && XtIsRealized(this->canvas)) {
         pendingRedrawTimer = XtAppAddTimeOut(
             XtWidgetToApplicationContext(this->canvas),
-            REDRAW_DEBOUNCE_MS,
+            redrawDebounceMs,
             FixedRedrawCb,
             nullptr
         );
@@ -340,6 +366,11 @@ void CanvasInterface::ImportVectorOfWidgets(const std::vector<EditorWidgetInstan
 void CanvasInterface::DrawWidgetElement(Display* display, Window win, const EditorWidgetInstance& widget) {
     if (!display || !win || !widgetBackgroundContext || !textContext) return;
     bool isBeingEdited = widget.selected && isEnteringVisualStyleTextInput;
+    const unsigned int blinkTicksPerSecond = 4;
+
+    const auto now = std::chrono::steady_clock::now();
+    const double t = std::chrono::duration<double>(now.time_since_epoch()).count();
+    const bool cursorVisible = (static_cast<long long>(t * blinkTicksPerSecond) % 2) == 0;
 
     switch (widget.type) {
         case ToolTypes::Button: {
@@ -348,7 +379,20 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
             int textY = widget.y + (widget.height / 2) + 4;
             int textX = widget.x + (widget.width - (widget.value.length() * 6)) / 2;
             if (textX < widget.x + 4) textX = widget.x + 4;
+            if (isBeingEdited && selectedTextRegion.startCurIndex != selectedTextRegion.endCurIndex) {
+                int selStart = std::min(selectedTextRegion.startCurIndex, selectedTextRegion.endCurIndex);
+                int selEnd = std::max(selectedTextRegion.startCurIndex, selectedTextRegion.endCurIndex);
+                int highlightX = textX + selStart * textCharWidth;
+                int highlightW = (selEnd - selStart) * textCharWidth;
+                XFillRectangle(display, win, textHighlightContext, highlightX, widget.y + 4, highlightW, widget.height - 8);
+            }
             XDrawString(display, win, textContext, textX, textY, widget.value.c_str(), widget.value.length());
+            if (isBeingEdited) {
+                int cursorX = textX + currentCursorPositionIndex * textCharWidth;
+                if (cursorVisible) {
+                    XDrawLine(display, win, labelContext, cursorX, textY-8, cursorX, textY);
+                }
+            }
             break;
         }
         case ToolTypes::Label: {
@@ -365,9 +409,8 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
             XDrawString(display, win, labelContext, textX, textY, widget.value.c_str(), widget.value.length());
             if (isBeingEdited) {
                 int cursorX = textX + currentCursorPositionIndex * textCharWidth;
-                // add blinking cursor
-                if (time(NULL) % 2 == 0) {
-                    XDrawLine(display, win, labelContext, cursorX, textY-8, cursorX, textY+4);
+                if (cursorVisible) {
+                    XDrawLine(display, win, labelContext, cursorX, textY-8, cursorX, textY);
                 }
             }
             break;
@@ -408,7 +451,21 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
             XDrawLine(display, win, textContext, widget.x + 9 , boxY + 8, widget.x + 13, boxY + 2);
 
             int textY = widget.y + (widget.height / 2) + 4;
-            XDrawString(display, win, textContext, widget.x + 22, textY, widget.value.c_str(), widget.value.length());
+            int textX = widget.x + 22;
+            if (isBeingEdited && selectedTextRegion.startCurIndex != selectedTextRegion.endCurIndex) {
+                int selStart = std::min(selectedTextRegion.startCurIndex, selectedTextRegion.endCurIndex);
+                int selEnd = std::max(selectedTextRegion.startCurIndex, selectedTextRegion.endCurIndex);
+                int highlightX = textX + selStart * textCharWidth;
+                int highlightW = (selEnd - selStart) * textCharWidth;
+                XFillRectangle(display, win, textHighlightContext, highlightX, widget.y + 4, highlightW, widget.height - 8);
+            }
+            XDrawString(display, win, textContext, textX, textY, widget.value.c_str(), widget.value.length());
+            if (isBeingEdited) {
+                int cursorX = textX + currentCursorPositionIndex * textCharWidth;
+                if (cursorVisible) {
+                    XDrawLine(display, win, labelContext, cursorX, textY-8, cursorX, textY);
+                }
+            }
             break;
         }
         case ToolTypes::Frame: {
@@ -685,6 +742,7 @@ void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY, Time eventTi
             }
         }
         g_canvas->SelectWidget(-1);
+        isEnteringVisualStyleTextInput = false;
     } else {
         std::string defaultName, defaultValue;
         int defaultWidth = 120, defaultHeight = 35;
@@ -727,6 +785,7 @@ void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY, Time eventTi
         widgets.push_back(newWidget);
         g_canvas->SelectWidget(widgets.size() - 1);
         SetTool(ToolTypes::Select);
+        isEnteringVisualStyleTextInput = false;
     }
 }
 
