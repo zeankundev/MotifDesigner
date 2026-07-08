@@ -339,6 +339,7 @@ void CanvasInterface::ImportVectorOfWidgets(const std::vector<EditorWidgetInstan
 
 void CanvasInterface::DrawWidgetElement(Display* display, Window win, const EditorWidgetInstance& widget) {
     if (!display || !win || !widgetBackgroundContext || !textContext) return;
+    bool isBeingEdited = widget.selected && isEnteringVisualStyleTextInput;
 
     switch (widget.type) {
         case ToolTypes::Button: {
@@ -354,7 +355,21 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
             XFillRectangle(display, win, backgroundContext, widget.x, widget.y, widget.width, widget.height);
             int textY = widget.y + (widget.height / 2) + 4;
             int textX = widget.x + 4;
+            if (isBeingEdited && selectedTextRegion.startCurIndex != selectedTextRegion.endCurIndex) {
+                int selStart = std::min(selectedTextRegion.startCurIndex, selectedTextRegion.endCurIndex);
+                int selEnd = std::max(selectedTextRegion.startCurIndex, selectedTextRegion.endCurIndex);
+                int highlightX = textX + selStart * textCharWidth;
+                int highlightW = (selEnd - selStart) * textCharWidth;
+                XFillRectangle(display, win, textHighlightContext, highlightX, widget.y + 4, highlightW, widget.height - 8);
+            }
             XDrawString(display, win, labelContext, textX, textY, widget.value.c_str(), widget.value.length());
+            if (isBeingEdited) {
+                int cursorX = textX + currentCursorPositionIndex * textCharWidth;
+                // add blinking cursor
+                if (time(NULL) % 2 == 0) {
+                    XDrawLine(display, win, labelContext, cursorX, textY-8, cursorX, textY+4);
+                }
+            }
             break;
         }
         case ToolTypes::TextField: {
@@ -362,7 +377,6 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
             CanvasInterface::DrawBevel(display, win, widget.x, widget.y, widget.width, widget.height, true);
             int textY = widget.y + (widget.height / 2) + 4;
             int textBaseX = widget.x + 6;
-            bool isBeingEdited = widget.selected && isEnteringVisualStyleTextInput;
 
             // Draw the selection highlight behind the text, if this field is being edited
             if (isBeingEdited && selectedTextRegion.startCurIndex != selectedTextRegion.endCurIndex) {
@@ -574,7 +588,11 @@ void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY, Time eventTi
     if (isDoubleClickDetected) {
         Logger::log("Double click detected - entering text edit mode");
         if (selectedIndex >= 0 && selectedIndex < (int)widgets.size() &&
-            widgets[selectedIndex].type == ToolTypes::TextField) {
+            (widgets[selectedIndex].type == ToolTypes::TextField || 
+             widgets[selectedIndex].type == ToolTypes::Label ||
+             widgets[selectedIndex].type == ToolTypes::Button ||
+             widgets[selectedIndex].type == ToolTypes::Toggle ||
+             widgets[selectedIndex].type == ToolTypes::Frame)) {
             const auto& w = widgets[selectedIndex];
             int relativeX = mouseX - (w.x + 6);
             int clickIndex = relativeX / textCharWidth;
