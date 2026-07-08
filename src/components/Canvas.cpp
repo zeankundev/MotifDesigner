@@ -11,6 +11,7 @@
 #include <Xm/Frame.h>
 #include <Xm/Xm.h>
 #include <Xm/XmStrDefs.h>
+#include <cstdlib>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -58,9 +59,35 @@ GC handleInnerContext;
 bool graphicsContextsInitialized = false;
 bool isDeletingWidget = false;
 bool requiresRedraw = false;
+bool isEnteringVisualStyleTextInput = false;
 
 static XtIntervalId pendingRedrawTimer = 0;
 const unsigned int REDRAW_DEBOUNCE_MS = 16;
+
+Time lastClickTime = 0;
+int lastClickX = 0;
+int lastClickY = 0;
+bool lastClickValid = false;
+
+bool IsDoubleClick(int x, int y, Time currentTime) {
+    static constexpr Time DOUBLE_CLICK_MS = 1500;
+    bool isDouble = false;
+    if (lastClickValid) {
+        Time delta = currentTime - lastClickTime;
+        if (delta <= DOUBLE_CLICK_MS) {
+            const int maxDistance = 6;
+            if (std::abs(x - lastClickX) <= maxDistance && std::abs(y - lastClickY) <= maxDistance) {
+                isDouble = true;
+                Logger::log((std::string("Double click detected at (") + std::to_string(x) + ", " + std::to_string(y) + ")").c_str());
+            }
+        }
+    }
+    lastClickTime = currentTime;
+    lastClickX = x;
+    lastClickY = y;
+    lastClickValid = true;
+    return isDouble;
+}
 
 void CanvasInterface::InitializeGraphicContexts(Widget canvas) {
     if (graphicsContextsInitialized) {
@@ -385,7 +412,15 @@ bool CanvasInterface::GetSnapToGridStatus() {
     return snapToGrid;
 }
 
-void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY) {
+void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY, Time eventTime) {
+    const bool isDoubleClickDetected = IsDoubleClick(mouseX, mouseY, eventTime);
+
+    if (isDoubleClickDetected) {
+        // todo 1.1: add double click
+        Logger::log("Double click detected (todo)");
+        return;
+    }
+
     if (g_canvas == nullptr) return;
     if (activeTool == ToolTypes::Select) {
         for (int i = widgets.size() - 1; i >= 0; --i) {
@@ -638,7 +673,8 @@ void CanvasInputCallback(Widget w, XtPointer clientData, XtPointer callData) {
     if (event->type == ButtonPress) {
         int x = event->xbutton.x;
         int y = event->xbutton.y;
-        canvas->HandleCanvasMouseDown(x, y);
+        Time t = event->xbutton.time;
+        canvas->HandleCanvasMouseDown(x, y, t);
     } else if (event->type == MotionNotify) {
         int x = event->xbutton.x;
         int y = event->xbutton.y;
@@ -652,17 +688,25 @@ void CanvasKeyPressCallback(Widget w, XtPointer clientData, XEvent* event, Boole
     Logger::log("Key callback fired");
     if (event->type == KeyPress) {
         KeySym sym = XLookupKeysym(&event->xkey, 0);
-        if (sym == XK_Delete || sym == XK_BackSpace) {
-            Logger::log("Either Del or Bksp were pressed, deleting widget");
-            g_canvas->DeleteSelectedWidget();
-        } else if (sym == XK_Up) {
-            g_canvas->ShiftComponentPositionByKeystroke(0, -10);
-        } else if (sym == XK_Down) {
-            g_canvas->ShiftComponentPositionByKeystroke(0, 10);
-        } else if (sym == XK_Left) {
-            g_canvas->ShiftComponentPositionByKeystroke(-10, 0);
-        } else if (sym == XK_Right) {
-            g_canvas->ShiftComponentPositionByKeystroke(10, 0);
+        switch (sym) {
+            case XK_Delete : {
+                g_canvas->DeleteSelectedWidget();
+            } break;
+            case XK_BackSpace : {
+                g_canvas->DeleteSelectedWidget();
+            } break;
+            case XK_Up : {
+                g_canvas->ShiftComponentPositionByKeystroke(0, -10);
+            } break;
+            case XK_Down : {
+                g_canvas->ShiftComponentPositionByKeystroke(0, 10);
+            } break;
+            case XK_Left : {
+                g_canvas->ShiftComponentPositionByKeystroke(-10, 0);
+            } break;
+            case XK_Right : {
+                g_canvas->ShiftComponentPositionByKeystroke(10, 0);
+            } break;
         }
     }
 }

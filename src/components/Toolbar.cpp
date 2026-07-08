@@ -120,7 +120,7 @@ Widget Components::RenderToolbar(Widget parent) {
     ToolbarButtons::CreateToolbarButton(toolbarForm, LabelIcon, (char*)"LabelButton", LabelButtonCallback, "Add Label");
     ToolbarButtons::CreateToolbarButton(toolbarForm, TextFieldIcon, (char*)"TextFieldButton", TextFieldButtonCallback, "Add Text Field");
     ToolbarButtons::CreateToolbarButton(toolbarForm, CheckmarkIcon, (char*)"ToggleButton", CheckmarkButtonCallback, "Add Toggle");
-    // todo 0.8: implement more options (toggle, frame) as tool choices
+    // todo 1.2: implement more options (toggle, frame) as tool choices
 
     return mainToolbar;
 }

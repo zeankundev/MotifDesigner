@@ -46,7 +46,7 @@ public:
     void SetPropertyPanel();
     void ClearPropertyPanel();
     static void SetTool(ToolTypes tool);
-    static void HandleCanvasMouseDown(int mouseX, int mouseY);
+    static void HandleCanvasMouseDown(int mouseX, int mouseY, Time eventTime);
     static void HandleCanvasMouseMove(int mouseX, int mouseY);
     static void HandleCanvasMouseUp();
     void ShiftComponentPositionByKeystroke(int directionX, int directionY);

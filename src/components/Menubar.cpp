@@ -420,7 +420,6 @@ Widget Components::RenderMenubar(Widget parent) {
     MenuContent fileContents[] = {
         // todo 1.2: implement project structuring for projects
         // MENU_ITEM_VOID("New Project", nullptr),
-        // todo 1.0: add basic visual file editing, saving, etc.
         MENU_ITEM_VOID("New Visual File", CreateNewVisualFileCB),
         // MENU_ITEM_VOID("Open Project", nullptr),
         MENU_ITEM_VOID("Open Visual File", OpenFileDialog),
