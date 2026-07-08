@@ -335,26 +335,29 @@ void CanvasInterface::DrawBevel(Display* display, Window win, int x, int y, int 
 
 static void FixedRedrawCb(XtPointer clientData, XtIntervalId* id) {
     pendingRedrawTimer = 0;
-    if (g_canvas) {
-        g_canvas->RefreshCanvas();
-        g_canvas->ScheduleRedraw();
+
+    if (!g_canvas || !g_canvas->canvas || !XtIsRealized(g_canvas->canvas)) {
+        return;
     }
+
+    // Always draw every tick (continuous loop)
+    g_canvas->RefreshCanvas();
+
+    // Immediately schedule next frame
+    g_canvas->ScheduleRedraw();
 }
 
 void CanvasInterface::ScheduleRedraw() {
-    if (pendingRedrawTimer != 0) {
-        XtRemoveTimeOut(pendingRedrawTimer);
-        pendingRedrawTimer = 0;
-    }
+    // One timer at a time
+    if (pendingRedrawTimer != 0) return;
+    if (!this->canvas || !XtIsRealized(this->canvas)) return;
 
-    if (this->canvas && XtIsRealized(this->canvas)) {
-        pendingRedrawTimer = XtAppAddTimeOut(
-            XtWidgetToApplicationContext(this->canvas),
-            redrawDebounceMs,
-            FixedRedrawCb,
-            nullptr
-        );
-    }
+    pendingRedrawTimer = XtAppAddTimeOut(
+        XtWidgetToApplicationContext(this->canvas),
+        redrawDebounceMs,   // ~16ms => ~60fps
+        FixedRedrawCb,
+        nullptr
+    );
 }
 
 void CanvasInterface::ImportVectorOfWidgets(const std::vector<EditorWidgetInstance>& widgetsFromMethod) {
@@ -874,6 +877,7 @@ void CanvasInterface::HandleCanvasMouseMove(int mouseX, int mouseY) {
 void CanvasInterface::HandleCanvasMouseUp() {
     isDragging = false;
     isResizing = false;
+    g_canvas->ScheduleRedraw(); // final settled frame immediately queued
 }
 
 void CanvasInterface::ApplyPropertyPanelChanges() {
@@ -923,6 +927,7 @@ void ExposeCanvasCallback(Widget w, XtPointer clientData, XtPointer callData) {
     // Ensure graphics contexts are initialized when widget is first exposed
     CanvasInterface::InitializeGraphicContexts(w);
     canvas->RefreshCanvas();
+    canvas->ScheduleRedraw();
 }
 void CanvasInputCallback(Widget w, XtPointer clientData, XtPointer callData) {
     CanvasInterface* canvas = static_cast<CanvasInterface*>(clientData);
@@ -959,7 +964,7 @@ void CanvasKeyPressCallback(Widget w, XtPointer clientData, XEvent* event, Boole
             switch (sym) {
                 case XK_a: case XK_A:
                     g_canvas->SelectAllText();
-                    g_canvas->ScheduleRedraw();
+                    // g_canvas->ScheduleRedraw();
                     return;
                 case XK_c: case XK_C:
                     g_canvas->CopySelectionToClipboard();
@@ -1009,7 +1014,7 @@ void CanvasKeyPressCallback(Widget w, XtPointer clientData, XEvent* event, Boole
                         }
                         g_canvas->ClearTextSelection();
                     }
-                    g_canvas->ScheduleRedraw();
+                    // g_canvas->ScheduleRedraw();
                 } else {
                     g_canvas->ShiftComponentPositionByKeystroke(-10, 0);
                 }
@@ -1027,7 +1032,7 @@ void CanvasKeyPressCallback(Widget w, XtPointer clientData, XEvent* event, Boole
                         }
                         g_canvas->ClearTextSelection();
                     }
-                    g_canvas->ScheduleRedraw();
+                    // g_canvas->ScheduleRedraw();
                 } else {
                     g_canvas->ShiftComponentPositionByKeystroke(10, 0);
                 }
@@ -1040,7 +1045,7 @@ void CanvasKeyPressCallback(Widget w, XtPointer clientData, XEvent* event, Boole
                         g_canvas->TeleportCursorToIndex(0);
                         g_canvas->ClearTextSelection();
                     }
-                    g_canvas->ScheduleRedraw();
+                    // g_canvas->ScheduleRedraw();
                 }
             } break;
             case XK_End : {
@@ -1052,7 +1057,7 @@ void CanvasKeyPressCallback(Widget w, XtPointer clientData, XEvent* event, Boole
                         g_canvas->TeleportCursorToIndex(len);
                         g_canvas->ClearTextSelection();
                     }
-                    g_canvas->ScheduleRedraw();
+                    // g_canvas->ScheduleRedraw();
                 }
             } break;
             case XK_Return : case XK_KP_Enter : {
@@ -1060,13 +1065,13 @@ void CanvasKeyPressCallback(Widget w, XtPointer clientData, XEvent* event, Boole
                     g_canvas->EnterDoubleClickValueEdit(false);
                     g_canvas->ClearTextSelection();
                     g_canvas->SetPropertyPanel();
-                    g_canvas->ScheduleRedraw();
+                    // g_canvas->ScheduleRedraw();
                 }
             } break;
             case XK_Escape : {
                 g_canvas->EnterDoubleClickValueEdit(false);
                 g_canvas->ClearTextSelection();
-                g_canvas->ScheduleRedraw();
+                // g_canvas->ScheduleRedraw();
             } break;
             default: {
                 // Printable character typed while editing: replaces the active selection, if any
@@ -1074,7 +1079,7 @@ void CanvasKeyPressCallback(Widget w, XtPointer clientData, XEvent* event, Boole
                     unsigned char typedChar = (unsigned char)lookupBuffer[0];
                     if (typedChar >= 0x20 && typedChar < 0x7F) {
                         g_canvas->InsertTextAtCursor(std::string(1, (char)typedChar));
-                        g_canvas->ScheduleRedraw();
+                        // g_canvas->ScheduleRedraw();
                     }
                 }
             } break;
