@@ -15,6 +15,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <cctype>
 
 enum class ResizeHandle {
     Nothing,
@@ -52,6 +54,7 @@ GC shadowLightContext;
 GC textContext;
 GC labelContext;
 GC selectBorderGraphicsContext;
+GC textHighlightContext;
 
 GC handleOuterContext;
 GC handleInnerContext;
@@ -68,6 +71,12 @@ Time lastClickTime = 0;
 int lastClickX = 0;
 int lastClickY = 0;
 bool lastClickValid = false;
+
+int currentCursorPositionIndex = 0;
+CanvasInterface::SelectedTextRegion selectedTextRegion;
+int selectionAnchorIndex = -1;
+std::string textEditClipboard;
+const int textCharWidth = 6;
 
 bool IsDoubleClick(int x, int y, Time currentTime) {
     static constexpr Time DOUBLE_CLICK_MS = 1500;
@@ -149,7 +158,134 @@ void CanvasInterface::InitializeGraphicContexts(Widget canvas) {
     values.foreground = color.pixel;
     handleInnerContext = XCreateGC(display, win, GCForeground, &values);
 
+    XAllocNamedColor(display, cmap, "#99CCFF", &color, &exact);
+    values.foreground = color.pixel;
+    textHighlightContext = XCreateGC(display, win, GCForeground, &values);
+
     graphicsContextsInitialized = true;
+}
+
+// Helpers for double click to edit text
+
+void CanvasInterface::EnterDoubleClickValueEdit(bool shouldEnter) {
+    isEnteringVisualStyleTextInput = shouldEnter;
+}
+bool CanvasInterface::IsEnteringDoubleClickValueEdit() {
+    return isEnteringVisualStyleTextInput;
+}
+
+int CanvasInterface::GetCurrentCursorPositionIndex() {
+    return currentCursorPositionIndex;
+}
+
+void CanvasInterface::ShiftCurrentCursorIndexPos(int amount) {
+int maxLen = (selectedIndex >= 0 && selectedIndex < (int)widgets.size())
+        ? (int)widgets[selectedIndex].value.length() : 0;
+    int newPos = currentCursorPositionIndex + amount;
+    if (newPos < 0) newPos = 0;
+    if (newPos > maxLen) newPos = maxLen;
+    currentCursorPositionIndex = newPos;
+}
+
+void CanvasInterface::ClearTextSelection() {
+    selectionAnchorIndex = -1;
+    selectedTextRegion.startCurIndex = currentCursorPositionIndex;
+    selectedTextRegion.endCurIndex = currentCursorPositionIndex;
+}
+
+bool CanvasInterface::HasActiveTextSelection() {
+    return selectedTextRegion.startCurIndex != selectedTextRegion.endCurIndex;
+}
+
+void CanvasInterface::SelectAllText() {
+    if (selectedIndex < 0 || selectedIndex >= (int)widgets.size()) return;
+    int len = (int)widgets[selectedIndex].value.length();
+    selectionAnchorIndex = 0;
+    selectedTextRegion.startCurIndex = 0;
+    selectedTextRegion.endCurIndex = len;
+    currentCursorPositionIndex = len;
+}
+
+void CanvasInterface::ExtendSelectionByKeystroke(int amount) {
+    if (selectedIndex < 0 || selectedIndex >= (int)widgets.size()) return;
+    if (selectionAnchorIndex == -1) {
+        selectionAnchorIndex = currentCursorPositionIndex;
+    }
+    int len = (int)widgets[selectedIndex].value.length();
+    int newPos = currentCursorPositionIndex + amount;
+    if (newPos < 0) newPos = 0;
+    if (newPos > len) newPos = len;
+    currentCursorPositionIndex = newPos;
+
+    selectedTextRegion.startCurIndex = std::min(selectionAnchorIndex, currentCursorPositionIndex);
+    selectedTextRegion.endCurIndex = std::max(selectionAnchorIndex, currentCursorPositionIndex);
+}
+
+void CanvasInterface::DeleteSelectedText() {
+    if (selectedIndex < 0 || selectedIndex >= (int)widgets.size()) return;
+    auto& w = widgets[selectedIndex];
+    if (HasActiveTextSelection()) {
+        int start = selectedTextRegion.startCurIndex;
+        int end = selectedTextRegion.endCurIndex;
+        w.value.erase(start, end - start);
+        currentCursorPositionIndex = start;
+        ClearTextSelection();
+    } else if (currentCursorPositionIndex > 0) {
+        w.value.erase(currentCursorPositionIndex - 1, 1);
+        currentCursorPositionIndex--;
+    }
+    ScheduleRedraw();
+}
+
+void CanvasInterface::InsertTextAtCursor(const std::string& text) {
+    if (selectedIndex < 0 || selectedIndex >= (int)widgets.size() || text.empty()) return;
+    auto& w = widgets[selectedIndex];
+    if (HasActiveTextSelection()) {
+        int start = selectedTextRegion.startCurIndex;
+        int end = selectedTextRegion.endCurIndex;
+        w.value.erase(start, end - start);
+        currentCursorPositionIndex = start;
+        ClearTextSelection();
+    }
+    w.value.insert(currentCursorPositionIndex, text);
+    currentCursorPositionIndex += (int)text.length();
+    ScheduleRedraw();
+}
+
+void CanvasInterface::CopySelectionToClipboard() {
+    if (selectedIndex < 0 || selectedIndex >= (int)widgets.size() || !HasActiveTextSelection()) return;
+    const auto& w = widgets[selectedIndex];
+    int start = selectedTextRegion.startCurIndex;
+    int end = selectedTextRegion.endCurIndex;
+    textEditClipboard = w.value.substr(start, end - start);
+}
+
+void CanvasInterface::CutSelectionToClipboard() {
+    CopySelectionToClipboard();
+    DeleteSelectedText();
+}
+
+void CanvasInterface::PasteFromClipboard() {
+    if (textEditClipboard.empty()) return;
+    InsertTextAtCursor(textEditClipboard);
+}
+
+void CanvasInterface::TeleportCursorToIndex(int index) {
+    currentCursorPositionIndex = index;
+}
+
+int CanvasInterface::ReturnWidgetValueLength() {
+    if (selectedIndex == -1) return 0;
+    return widgets[selectedIndex].value.length();
+}
+
+void CanvasInterface::SetSelectedTextRange(int start, int end) {
+    selectedTextRegion.startCurIndex = start;
+    selectedTextRegion.endCurIndex = end;
+}
+
+CanvasInterface::SelectedTextRegion CanvasInterface::GetSelectedTextRegion() {
+    return selectedTextRegion;
 }
 
 void CanvasInterface::DrawGrid(Display* display, Window win, int width, int height) {
@@ -225,9 +361,25 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
             XFillRectangle(display, win, widgetBackgroundContext, widget.x, widget.y, widget.width, widget.height);
             CanvasInterface::DrawBevel(display, win, widget.x, widget.y, widget.width, widget.height, true);
             int textY = widget.y + (widget.height / 2) + 4;
-            XDrawString(display, win, textContext, widget.x + 6, textY, widget.value.c_str(), widget.value.length());
-            int cursorX = widget.x + 8 + (widget.value.length() * 6);
-            if (cursorX < widget.x + widget.width - 6) {
+            int textBaseX = widget.x + 6;
+            bool isBeingEdited = widget.selected && isEnteringVisualStyleTextInput;
+
+            // Draw the selection highlight behind the text, if this field is being edited
+            if (isBeingEdited && selectedTextRegion.startCurIndex != selectedTextRegion.endCurIndex) {
+                int selStart = std::min(selectedTextRegion.startCurIndex, selectedTextRegion.endCurIndex);
+                int selEnd = std::max(selectedTextRegion.startCurIndex, selectedTextRegion.endCurIndex);
+                int highlightX = textBaseX + selStart * textCharWidth;
+                int highlightW = (selEnd - selStart) * textCharWidth;
+                XFillRectangle(display, win, textHighlightContext, highlightX, widget.y + 4, highlightW, widget.height - 8);
+            }
+
+            XDrawString(display, win, textContext, textBaseX, textY, widget.value.c_str(), widget.value.length());
+
+            // Draw the text cursor: at the live edit position while editing, otherwise trailing the text
+            int cursorX = isBeingEdited
+                ? textBaseX + currentCursorPositionIndex * textCharWidth
+                : widget.x + 8 + (int)(widget.value.length() * textCharWidth);
+            if (cursorX < widget.x + widget.width - 4) {
                 XDrawLine(display, win, textContext, cursorX, widget.y + 4, cursorX, widget.y + widget.height - 4);
             }
             break;
@@ -304,6 +456,10 @@ void CanvasInterface::DrawWidgetElement(Display* display, Window win, const Edit
             int textY = badgeY + padY + charHeight;
             XDrawString(display, win, handleInnerContext, textX, textY, sizeLabel.c_str(), sizeLabel.length());
         }
+    }
+    if (isEnteringVisualStyleTextInput) {
+        // Draw the highlight first
+        // XFillRectangle(display, win, handleOuterContext, );
     }
 }
 
@@ -416,8 +572,33 @@ void CanvasInterface::HandleCanvasMouseDown(int mouseX, int mouseY, Time eventTi
     const bool isDoubleClickDetected = IsDoubleClick(mouseX, mouseY, eventTime);
 
     if (isDoubleClickDetected) {
-        // todo 1.1: add double click
-        Logger::log("Double click detected (todo)");
+        Logger::log("Double click detected - entering text edit mode");
+        if (selectedIndex >= 0 && selectedIndex < (int)widgets.size() &&
+            widgets[selectedIndex].type == ToolTypes::TextField) {
+            const auto& w = widgets[selectedIndex];
+            int relativeX = mouseX - (w.x + 6);
+            int clickIndex = relativeX / textCharWidth;
+            if (clickIndex < 0) clickIndex = 0;
+            if (clickIndex > (int)w.value.length()) clickIndex = (int)w.value.length();
+
+            // Expand outward from the click position to the surrounding word's boundaries
+            int wordStart = clickIndex;
+            int wordEnd = clickIndex;
+            while (wordStart > 0 && !std::isspace((unsigned char)w.value[wordStart - 1])) wordStart--;
+            while (wordEnd < (int)w.value.length() && !std::isspace((unsigned char)w.value[wordEnd])) wordEnd++;
+
+            // Clicked on whitespace / empty value: fall back to selecting everything
+            if (wordStart == wordEnd) {
+                wordStart = 0;
+                wordEnd = (int)w.value.length();
+            }
+
+            g_canvas->SetSelectedTextRange(wordStart, wordEnd);
+            g_canvas->TeleportCursorToIndex(wordEnd);
+            selectionAnchorIndex = wordStart;
+            isEnteringVisualStyleTextInput = true;
+            g_canvas->ScheduleRedraw();
+        }
         return;
     }
 
@@ -687,25 +868,138 @@ void CanvasInputCallback(Widget w, XtPointer clientData, XtPointer callData) {
 void CanvasKeyPressCallback(Widget w, XtPointer clientData, XEvent* event, Boolean* continueDispatch) {
     Logger::log("Key callback fired");
     if (event->type == KeyPress) {
-        KeySym sym = XLookupKeysym(&event->xkey, 0);
+        char lookupBuffer[32];
+        KeySym sym;
+        int typedLen = XLookupString(&event->xkey, lookupBuffer, sizeof(lookupBuffer) - 1, &sym, nullptr);
+        lookupBuffer[typedLen] = '\0';
+
+        bool shiftHeld = (event->xkey.state & ShiftMask) != 0;
+        bool ctrlHeld = (event->xkey.state & ControlMask) != 0;
+        bool editingText = g_canvas->IsEnteringDoubleClickValueEdit();
+
+        // Clipboard shortcuts only apply while actively editing a text field's value
+        if (editingText && ctrlHeld) {
+            switch (sym) {
+                case XK_a: case XK_A:
+                    g_canvas->SelectAllText();
+                    g_canvas->ScheduleRedraw();
+                    return;
+                case XK_c: case XK_C:
+                    g_canvas->CopySelectionToClipboard();
+                    return;
+                case XK_x: case XK_X:
+                    g_canvas->CutSelectionToClipboard();
+                    return;
+                case XK_v: case XK_V:
+                    g_canvas->PasteFromClipboard();
+                    return;
+                default:
+                    break;
+            }
+        }
+
         switch (sym) {
             case XK_Delete : {
-                g_canvas->DeleteSelectedWidget();
+                if (editingText) {
+                    g_canvas->DeleteSelectedText();
+                } else {
+                    g_canvas->DeleteSelectedWidget();
+                }
             } break;
             case XK_BackSpace : {
-                g_canvas->DeleteSelectedWidget();
+                if (editingText) {
+                    g_canvas->DeleteSelectedText();
+                } else {
+                    g_canvas->DeleteSelectedWidget();
+                }
             } break;
             case XK_Up : {
-                g_canvas->ShiftComponentPositionByKeystroke(0, -10);
+                if (!editingText) g_canvas->ShiftComponentPositionByKeystroke(0, -10);
             } break;
             case XK_Down : {
-                g_canvas->ShiftComponentPositionByKeystroke(0, 10);
+                if (!editingText) g_canvas->ShiftComponentPositionByKeystroke(0, 10);
             } break;
             case XK_Left : {
-                g_canvas->ShiftComponentPositionByKeystroke(-10, 0);
+                if (editingText) {
+                    if (shiftHeld) {
+                        g_canvas->ExtendSelectionByKeystroke(-1);
+                    } else {
+                        CanvasInterface::SelectedTextRegion region = g_canvas->GetSelectedTextRegion();
+                        if (region.startCurIndex != region.endCurIndex) {
+                            g_canvas->TeleportCursorToIndex(std::min(region.startCurIndex, region.endCurIndex));
+                        } else {
+                            g_canvas->ShiftCurrentCursorIndexPos(-1);
+                        }
+                        g_canvas->ClearTextSelection();
+                    }
+                    g_canvas->ScheduleRedraw();
+                } else {
+                    g_canvas->ShiftComponentPositionByKeystroke(-10, 0);
+                }
             } break;
             case XK_Right : {
-                g_canvas->ShiftComponentPositionByKeystroke(10, 0);
+                if (editingText) {
+                    if (shiftHeld) {
+                        g_canvas->ExtendSelectionByKeystroke(1);
+                    } else {
+                        CanvasInterface::SelectedTextRegion region = g_canvas->GetSelectedTextRegion();
+                        if (region.startCurIndex != region.endCurIndex) {
+                            g_canvas->TeleportCursorToIndex(std::max(region.startCurIndex, region.endCurIndex));
+                        } else {
+                            g_canvas->ShiftCurrentCursorIndexPos(1);
+                        }
+                        g_canvas->ClearTextSelection();
+                    }
+                    g_canvas->ScheduleRedraw();
+                } else {
+                    g_canvas->ShiftComponentPositionByKeystroke(10, 0);
+                }
+            } break;
+            case XK_Home : {
+                if (editingText) {
+                    if (shiftHeld) {
+                        g_canvas->ExtendSelectionByKeystroke(-g_canvas->GetCurrentCursorPositionIndex());
+                    } else {
+                        g_canvas->TeleportCursorToIndex(0);
+                        g_canvas->ClearTextSelection();
+                    }
+                    g_canvas->ScheduleRedraw();
+                }
+            } break;
+            case XK_End : {
+                if (editingText) {
+                    int len = g_canvas->ReturnWidgetValueLength();
+                    if (shiftHeld) {
+                        g_canvas->ExtendSelectionByKeystroke(len - g_canvas->GetCurrentCursorPositionIndex());
+                    } else {
+                        g_canvas->TeleportCursorToIndex(len);
+                        g_canvas->ClearTextSelection();
+                    }
+                    g_canvas->ScheduleRedraw();
+                }
+            } break;
+            case XK_Return : case XK_KP_Enter : {
+                if (editingText) {
+                    g_canvas->EnterDoubleClickValueEdit(false);
+                    g_canvas->ClearTextSelection();
+                    g_canvas->SetPropertyPanel();
+                    g_canvas->ScheduleRedraw();
+                }
+            } break;
+            case XK_Escape : {
+                g_canvas->EnterDoubleClickValueEdit(false);
+                g_canvas->ClearTextSelection();
+                g_canvas->ScheduleRedraw();
+            } break;
+            default: {
+                // Printable character typed while editing: replaces the active selection, if any
+                if (editingText && !ctrlHeld && typedLen > 0) {
+                    unsigned char typedChar = (unsigned char)lookupBuffer[0];
+                    if (typedChar >= 0x20 && typedChar < 0x7F) {
+                        g_canvas->InsertTextAtCursor(std::string(1, (char)typedChar));
+                        g_canvas->ScheduleRedraw();
+                    }
+                }
             } break;
         }
     }

@@ -45,6 +45,30 @@ public:
     void SelectWidget(int index);
     void SetPropertyPanel();
     void ClearPropertyPanel();
+    // start region: double click to edit value feature
+    struct SelectedTextRegion {
+        int startCurIndex;
+        int endCurIndex;
+    };
+    int ReturnWidgetValueLength();
+    void EnterDoubleClickValueEdit(bool shouldEnter);
+    bool IsEnteringDoubleClickValueEdit();
+    int GetCurrentCursorPositionIndex();
+    void ShiftCurrentCursorIndexPos(int amount);
+    void TeleportCursorToIndex(int index);
+    void SetSelectedTextRange(int start, int end);
+    SelectedTextRegion GetSelectedTextRegion();
+    // Claude was used because handling text is utterly complicated
+    void SelectAllText();
+    void ClearTextSelection();
+    void ExtendSelectionByKeystroke(int amount);
+    bool HasActiveTextSelection();
+    void DeleteSelectedText();
+    void InsertTextAtCursor(const std::string& text);
+    void CopySelectionToClipboard();
+    void CutSelectionToClipboard();
+    void PasteFromClipboard();
+    // end region
     static void SetTool(ToolTypes tool);
     static void HandleCanvasMouseDown(int mouseX, int mouseY, Time eventTime);
     static void HandleCanvasMouseMove(int mouseX, int mouseY);
